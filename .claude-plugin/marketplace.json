@@ -1,0 +1,30 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "llm-wiki",
+  "description": "LLM-Wiki 的 Claude Code 插件市场，提供知识库挂载、查询和任务回流能力。",
+  "owner": {
+    "name": "AndyKong"
+  },
+  "plugins": [
+    {
+      "name": "llm-wiki-client",
+      "description": "在 Claude Code 中挂载、查询并回流固定的 LLM-Wiki 知识库。",
+      "version": "0.1.0",
+      "author": {
+        "name": "AndyKong"
+      },
+      "source": "./plugins/llm-wiki-client",
+      "homepage": "https://github.com/AndyKong2020/LLM-Wiki-Marketplace/tree/main/plugins/llm-wiki-client",
+      "repository": "https://github.com/AndyKong2020/LLM-Wiki-Marketplace",
+      "category": "development",
+      "keywords": [
+        "llm-wiki",
+        "npu",
+        "wiki",
+        "backflow",
+        "gitcode"
+      ],
+      "strict": true
+    }
+  ]
+}

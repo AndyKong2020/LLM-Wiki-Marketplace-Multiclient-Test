@@ -1,0 +1,15 @@
+{
+  "name": "llm-wiki-client",
+  "version": "0.1.0",
+  "description": "在 Claude Code 中挂载、查询并回流固定的 LLM-Wiki 知识库。",
+  "author": {
+    "name": "AndyKong"
+  },
+  "keywords": [
+    "llm-wiki",
+    "npu",
+    "wiki",
+    "backflow",
+    "gitcode"
+  ]
+}
