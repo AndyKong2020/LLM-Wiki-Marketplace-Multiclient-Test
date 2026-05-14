@@ -220,7 +220,7 @@ mcp_url: http://localhost:5100/mcp
   （模型族 qwen3-moe / deepseek-r1 / hunyuan-* / longcat-* / kimi-k2 等；算子 fia / mla / dia / sparse-flash-attention 等；并行 tp / dp / cp / ep / zigzag-cp / ulysses 等；框架 sglang / torchair / pypto / ascendc / atb / catlass / tilelang 等；技术 npu-graph-mode / weight-prefetch / superkernel / afd 等；量化 w8a8c8 / w4a8c8 / mxfp8 / fp8-attention 等；平台 atlas-a3 / ascend910 等）
 - 进入新优化阶段、做方案分析、策略选择、debug 调试、性能/精度回归归因时
 
-涉及 subagent 拉起时，需让 subagent 同样使用 llm-wiki-query skill。
+涉及 subagent 时，必须将 llm-wiki-query skill 的使用说明注入到拉起 subagent 的 prompt 中。
 
 知识检索一律通过 MCP 工具：mcp__cann-infer-wiki__wiki_search、mcp__cann-infer-wiki__wiki_get_page。
 
@@ -241,7 +241,11 @@ mcp_url: http://localhost:5100/mcp
 
 文件存在但只含 BEGIN 或只含 END → **停止 mount**，记 `error_code=claude_pin_broken`，让用户先手动修复 CLAUDE.md（pin block 残缺通常意味着外部工具改坏了）。
 
-## 5. 汇报结果
+## 5. 触发 llm-wiki-query skill
+
+触发 llm-wiki-query skill，并确保 CLAUDE.md 的使用提示和 llm-wiki-query skill 的使用说明常驻上下文。
+
+## 6. 汇报结果
 
 mount 全流程结束后，按顺序输出以下字段（每行一个 `key=value`）：
 
