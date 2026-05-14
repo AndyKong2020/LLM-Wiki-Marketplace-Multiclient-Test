@@ -7,7 +7,7 @@ version: 0.3.0
 
 # LLM-Wiki Query
 
-## 1. 触发场景
+## 1. 触发查询的场景
 
 本 skill 是真实任务运行时的 wiki 入口。CLAUDE.md 中由 `/wiki-mount` 写入的 LLM-WIKI pin block 已经列出"哪些任务阶段必须查 wiki"，不要在临时判断中绕开它。
 
@@ -18,35 +18,27 @@ version: 0.3.0
 - debug 调试、性能或精度异常排查、错误模式归因
 - 涉及具体模型族（qwen3-moe / deepseek-r1 / hunyuan-* / longcat-* / kimi-k2 等）、算子（fia / mla / dia / sparse-flash-attention 等）、并行策略（tp / dp / cp / ep / zigzag-cp / ulysses 等）、推理框架（sglang / torchair / pypto / ascendc / atb 等）、优化技术（npu-graph-mode / weight-prefetch / superkernel 等）、量化（w8a8c8 / w4a8c8 / mxfp8 等）、硬件平台（atlas-a3 / ascend910）
 - 任务初期判断"是否有 wiki 经验可复用"
-- subagent 接到任务后，先查 wiki 再决定怎么做
+- subagent 接到任务后，先判断要不要查 wiki
 
-每次使用都必须写一条页面级记录，并把摘要同步到 `progress.md`（见第 4 节）。
+每次使用都必须对每个查询到的页面写记录，并把摘要同步到 `progress.md`（见第 4 节）。
 
 ## 2. 重要原则
 
-**知识来源唯一是 MCP**。永远通过 `mcp__cann-infer-wiki__wiki_search` 与 `mcp__cann-infer-wiki__wiki_get_page` 获取知识。不要绕开 MCP 去读 `~/.claude/llm-wiki/repos/` 下的 cache 文件——cache 是 server 端依赖，客户端"事实"只来自 MCP 响应。
+**通过 MCP 查询**。永远通过 `mcp__cann-infer-wiki__wiki_search` 与 `mcp__cann-infer-wiki__wiki_get_page` 获取知识。
 
-**信任 server 排序，不要客户端二次判断**。`wiki_search` 内部已经跑了 retriever（默认 claude-agent 模式：sub-Agent 读 summary/tags/qValue 后选 topK 并打分），返回的就是已经按相关性排好序的候选清单。客户端只做 ① 拟好 query ② 拿前几个 ID 去 `wiki_get_page` 取正文 ③ 读完应用。**不要**在客户端再写一套基于 summary/tags 的过滤、不要根据 score 阈值取舍、不要重写 query 反复 search 调阈值——那些都是 server 该解决的。
+`wiki_search` 返回 `warning`（retriever 失败）→ 据实上报给用户与 progress.md。
 
-不要预加载或穷举 wiki。`wiki_search` 的 `limit` 默认取 5 就够；`wiki_get_page` 一次拉 1-3 个 ID。不要"先 limit=50 再说"。
-
-不要凭记忆假设有哪些页、哪些标签。当前可用的页面集合**只从本次 `wiki_search` 响应里**读。
-
-`wiki_search` 返回 `warning`（retriever 失败）→ 据实上报给用户与 progress.md，不要伪造知识、不要换用 cache 文件凑数。
-
-subagent 使用本 skill 时与主 agent 共用同一份 `wiki_usage.md`。
-
-**永远不调用 `mcp__cann-infer-wiki__wiki_submit_trajectory`**——那是 `llm-wiki-backflow` 的职责。
+subagent 使用本 skill 时与主 agent 共用同一份 `wiki_usage.md`，位于当前任务的 `progress.md` 同级目录。
 
 ## 3. 执行查询（4 步）
 
 ### 3.1 拟 query
 
-把当前问题压缩成一句话，**用 wiki 词汇**：
+把当前问题压缩成一段话：
 
-- 用具体的算子/模型/技术名（`npu_fused_infer_attention_score` / `Qwen3-MoE` / `npu-graph-mode`），不要泛泛说"attention 加速"
+- 用具体的算子/模型族/技术名（`npu_fused_infer_attention_score` / `Qwen3` / `npu-graph-mode`），不要泛泛说"attention 加速"
 - 包含场景关键修饰：硬件平台 / 精度 / 并行配置 / 阶段（prefill/decode）
-- 短：一般 ≤30 字，不堆长句
+- 短：一般 ≤100 字，不堆长句
 
 示例：
 
@@ -76,10 +68,9 @@ mcp__cann-infer-wiki__wiki_search(query="<上一节拟好的 query>", limit=5)
 返回 `{results: [{id, summary, tags, score, qValue}, ...], total}`。这就是 server 已经排好序的 topK，**直接用**：
 
 - 看 top-1/top-2 的 `summary` 决定下一步要不要取正文（覆盖问题就取，明显不沾就重写一条 query）
-- 候选最多取前 3 个 ID 进入 3.3
-- 不要去读 score / qValue 数值做二次过滤——排序已经合过这些信号
+- 取候选页面 ID 进入 3.3
 
-如果 top-1 的 summary 跟问题完全不沾边（说明 query 没写好），**重写 query** 重新调一次，**不要**调 limit 翻底。最多重试一次；连续 2 次都不沾边就在 progress.md 记"wiki 暂无相关知识"，停止本次查询。
+如果 top-1 的 summary 跟问题完全不沾边（说明 query 没写好），**重写 query** 重新调一次；连续多次都不沾边就在 progress.md 记"wiki 暂无相关知识"，停止本次查询。
 
 ### 3.3 wiki_get_page
 
@@ -102,13 +93,13 @@ mcp__cann-infer-wiki__wiki_get_page(
 - **事实类**：API 名、参数表、约束条件
 - 若 `frontmatter.contradictions` 非空：必读其中之一了解争议点（再次 `wiki_get_page`）
 
+TODO:链接下探
+
 ### 3.4 应用 + 记录
 
-把读到的内容应用到当前任务。如要拉起 subagent 做下钻工作，**在 prompt 里明确要求 subagent 也用 `llm-wiki-query` skill 并写同一份 `wiki_usage.md`**（路径见 5 节）。
+把读到的内容应用到当前任务。如要拉起 subagent ，**在 prompt 里明确要求 subagent 也用 `llm-wiki-query` skill 和当前任务的 `wiki_usage.md`路径**（路径见 5 节）。
 
-每次 `wiki_get_page` 取过的页都要写到 `wiki_usage.md`（4.1 节）；本次查询对阶段判断有影响时，同步在 `progress.md` 追加一条 bullet（4.2 节）。
-
-不要把整页 content 复制进 `wiki_usage.md`——记录的是"为什么读 / 读完得到了什么"，不是 wiki 镜像。
+每次 `wiki_get_page` 取过的页都要写到 `wiki_usage.md`（4.1 节）；本次查询对阶段判断有影响时，同步在 `progress.md` 追加 wiki 查阅记录（4.2 节）。
 
 ## 4. 页面使用记录格式
 
@@ -116,11 +107,8 @@ mcp__cann-infer-wiki__wiki_get_page(
 
 **位置**（严格）：
 
-- 优先：当前阶段 `progress.md` 同级目录下的 `wiki_usage.md`
-- 当前任务有多个 `progress.md` → 选**正在更新**的那个阶段目录
-- 当前阶段还没有 `progress.md` → 在当前阶段目录创建 `wiki_usage.md`
-- **不要**写到 `.claude/` 或其它隐藏目录
-- **不要**写到全局缓存或个人目录
+- 优先：当前任务 `progress.md` 同级目录下的 `wiki_usage.md`
+- 当前任务还没有 `progress.md` → 在当前任务目录创建 `wiki_usage.md`
 
 **格式**：每个使用过的页面一个一级标题，标题直接用 MCP ID。
 
@@ -137,7 +125,7 @@ mcp__cann-infer-wiki__wiki_get_page(
 - overall: -1 | 0 | +1
 
 ## 备注
-保留限制、误导点、是否要继续使用、与其它页的关系
+保留限制、误导点、是否要继续使用、与其它页的关系、页面需要修正的点等
 
 # wiki_dynamic_cann-infer_<slug>_md
 
@@ -159,16 +147,7 @@ mcp__cann-infer-wiki__wiki_get_page(
 - 查阅：`wiki_static_cann-infer_models_qwen3-moe_md`、`wiki_static_cann-infer_kernels_fused-infer-attention-score_md`
   - 目的：判断 attention TP 切分上限对 decode 时延的影响
   - 结论：4tp + FIA 比 8tp 整体快 35%；KV cache 翻倍但 FIA 单核增益更大
-  - 记录：`wiki_usage.md`
 ```
-
-阶段小节不存在或难找位置 → 在 `progress.md` 末尾建一小节：
-
-```md
-## Wiki 查询记录
-```
-
-`progress.md` 写"阶段进展摘要"，`wiki_usage.md` 写"逐页面原因/效果/分数"。两者都要写。
 
 ## 5. Subagent 规则
 
@@ -197,9 +176,3 @@ subagent 使用本 skill 时必须遵守：
 | top-1 候选 summary 完全不沾边 | 重写 query 再试一次；最多重试 1 次仍不沾边 → progress.md 记"wiki 暂无相关知识"，停止 |
 | `wiki_search` 返回 `total=0` | progress.md 记一笔"wiki 暂无相关知识"；继续任务一般流程 |
 
-## 8. 边界
-
-- 不修改 MCP server / wiki cache / 任何 wiki 仓内容
-- 不调用 `mcp__cann-infer-wiki__wiki_submit_trajectory`（属于 `llm-wiki-backflow`）
-- 不在 query 阶段生成或应用 patch；wiki 是参考，不是命令
-- 任务结束需要回流时使用 `/wiki-backflow`，backflow 会把 `wiki_usage.md` 一并归档到任务 source

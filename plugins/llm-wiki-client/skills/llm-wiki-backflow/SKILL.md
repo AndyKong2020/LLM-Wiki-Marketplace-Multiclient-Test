@@ -7,7 +7,7 @@ version: 0.2.0
 
 # LLM-Wiki Backflow
 
-本 skill 只做两件事：**轨迹归档** 和 **轨迹上传**。
+本 skill 包含 **轨迹归档** 和 **轨迹上传** 的具体操作。
 
 ```text
 /wiki-backflow
@@ -18,8 +18,6 @@ version: 0.2.0
     +--> 2. 轨迹上传：用户确认后，调用 wiki_submit_trajectory MCP 工具，
           单次把整个目录上传到 CANN-Infer-Wiki 的 sources/sessions/uploaded/<session_id>/
 ```
-
-客户端 backflow 不生成 patch proposal、不直接改 wiki 内容。上传后 server 端 monitor 自动接力跑 ingest pipeline（脱敏、Q 值更新、知识提取、查重合并、落库到 `wiki/dynamic/cann-infer/`）。客户端只负责"把现场原料打包送进 MCP"。
 
 ## 1. 轨迹归档
 
@@ -40,10 +38,8 @@ version: 0.2.0
 - 如果当前任务已有明确 slug，直接使用。
 - 否则从当前 `progress.md` 标题、当前 git branch、最近用户任务描述、workspace 目录名中推断一个短 slug。
 - slug 必须使用小写 ASCII、数字和短横线；非字母数字统一转成 `-`。
-- slug 是本地目录名和 MCP 上传 `session_id` 的依据，长度要短，避免整句描述。`session_id` 不能以 `.` 开头，否则 server 端会拒绝。
 - 如果多个 slug 都合理但会影响后续可读性或 `session_id` 唯一性，先问用户确认。
-- 只是不够漂亮时不要问用户；选择一个稳定、可读的 slug。
-- 如果本地已存在同名 `.claude/llm-wiki/backflow/<task-slug>/`，不要覆盖。优先复用已有归档继续上传；如果这次是新任务，给 slug 追加短后缀，例如 `-r2`。
+- 如果本地已存在同名 `.claude/llm-wiki/backflow/<task-slug>/`，给 slug 追加短后缀用作区分。
 
 workspace 判断：
 
@@ -51,11 +47,9 @@ workspace 判断：
 - 如果当前任务明显在某个子目录完成，则选择该子目录。
 - 如果存在多个同样可信的 workspace，且选错会导致归档范围明显不同，先问用户确认。
 
-`source.md` 的 `title` 只是展示字段。可以从 slug 反推成可读标题，也可以使用 `progress.md` 标题；它不驱动目录、`session_id` 或 server 端 ingest 流程。
-
 ### 1.2 判断应归档的材料
 
-归档目标是保留后续服务端生成 proposal 所需的证据，而不是镜像整个机器。
+归档目标是保留后续服务端生成 proposal 所需的证据。
 
 优先纳入：
 
@@ -73,7 +67,7 @@ workspace 判断：
 - credentials、tokens、keys、`.env*`
 - `.git/`、`.idea/`、`.vscode/`、`.claude/llm-wiki/backflow/`（避免递归归档）
 
-如果被排除的材料有证据价值，在 `source.md` 的 `Notes` 中写清原路径、原因、摘要和可访问位置；不要把大文件硬塞进上传（base64 编码后流量会膨胀 ~33%）。
+如果被排除的材料有证据价值，在 `source.md` 的 `Notes` 中写清原路径、原因、摘要和可访问位置；不要把大文件硬塞进上传。
 
 ### 1.3 创建本地归档
 
@@ -83,39 +77,28 @@ workspace 判断：
 .claude/llm-wiki/backflow/<task-slug>/
 ```
 
-**这个目录的内容就是后续会被 `wiki_submit_trajectory` 一次性上传的"文件清单"**——顶层必有 `source.md`，其余文件可以任意命名、任意多级嵌套。Server 端会原样保留树结构落到 `sources/sessions/uploaded/<session_id>/`，再由 ingest 加工。
+**这个目录的内容就是后续会被 `wiki_submit_trajectory` 一次性上传的"文件清单"**——顶层必有 `<task-slug>.md`，其余文件可以任意命名、任意多级嵌套。Server 端会原样保留树结构落到 `sources/sessions/uploaded/<session_id>/`，再由 ingest 加工。
 
-如果该目录已经存在，先判断它是否属于同一次任务：
-
-- 同一次任务：复用目录，增量补齐缺失材料。
-- 不是同一次任务：不要删除旧目录，重新选择带后缀的 `task-slug`（如 `-r2`）。
 
 归档目录至少包含：
 
 ```text
 .claude/llm-wiki/backflow/<task-slug>/
-├── source.md               # 顶层总览（标题/摘要/目录/Notes）
+├── <task-slug>.md               # 顶层总览（标题/摘要/目录/Notes）
 └── workspace/              # 任务现场材料
     ├── progress.md         # 如有
     ├── wiki_usage.md       # 如有（query skill 写的页面使用记录）
     └── ...
 ```
 
-执行方式由 agent 自行判断。可以使用 `mkdir`、`cp`、`rsync`、`find`、`git status`、`git diff` 等小命令，但不要把整个流程包装成一段大脚本。
-
-建议做法：
-
-- 先创建 `workspace/`，把判断为相关的任务材料复制进去（保留必要的子目录结构）。
+- 先创建 `workspace/`，把所有相关的任务材料复制进去（保留必要的子目录结构），默认直接复制任务目录，并排除大文件。
 - 如果 workspace 是 git 仓库，可以把 `git status --short` 或 `git diff --no-ext-diff -- .` 保存为普通 workspace 文件。
-- 不固定创建 `patches/` 目录；是否保存 diff、保存到哪里，由 agent 根据当前任务判断。
-- 如果 diff 太大，不要归档原文，只在 `source.md` 的 `Notes` 说明原路径。
-- **不要**在归档目录里放真正的二进制（模型权重、profiler raw、大压缩包）——上传走 base64 编码，每多 1 MB 文件就是 ~1.3 MB 网络流量。
+- 不固定创建 `patches/` 目录；是否保存 diff、保存到哪里，根据当前任务判断。
+- **不要**在归档目录里放真正的二进制（模型权重、profiler raw、大压缩包）。
 
-### 1.4 编写顶层 source.md
+### 1.4 编写顶层 <task-slug>.md
 
-`source.md` 是上传时强制要求的顶层入口（server 端会先读它做 domain 关键字粗筛，再作为 Agent 入参 overview）。务必写得完整自包含。
-
-我们的上传走 MCP 直传，**不需要** `url` / `repo` / `ref` 字段。源 URL 与稳定引用由 server 端 ingest 完成后自行确定（归档落到 `sources/sessions/accepted/<session_id>/source.md`，知识入库时 `raw_links` 自动指向该路径）。
+`<task-slug>.md` 是上传时强制要求的顶层入口，务必写得完整自包含。
 
 推荐结构：
 
@@ -132,7 +115,6 @@ tags: [<场景/优化阶段/相关模型族等关键 tag>]
 
 ## Summary
 
-一段话讲清楚：场景（硬件/精度/并行）+ 关键问题或目标 + 最终结论或现状。这段会被 server 端读到做粗筛，越具体越好（包含 `npu_fused_infer_attention_score`、`Qwen3-MoE`、`decode 时延` 这类关键词更易命中 cann-infer domain 闸门）。
 
 ## Task Trace
 
@@ -140,13 +122,13 @@ tags: [<场景/优化阶段/相关模型族等关键 tag>]
 
 ## Wiki Usage History
 
-`workspace/wiki_usage.md` 路径（如有；为 server 端 Q-value 更新提供输入）
+`workspace/wiki_usage.md` 路径（如有）
 
 ## Archive Layout
 
 ```text
 backflow/<task-slug>/
-├── source.md
+├── <task-slug>.md
 └── workspace/
     ├── progress.md
     ├── wiki_usage.md
@@ -167,7 +149,7 @@ backflow/<task-slug>/
 轨迹归档完成后，向用户汇报：
 
 - 本地 archive 路径 `.claude/llm-wiki/backflow/<task-slug>/`
-- 顶层 `source.md` 一句话总结 + 文件大小（不复制全文）
+- 顶层 `<task-slug>.md` 一句话总结 + 文件大小（不复制全文）
 - 整个目录的文件清单（`find . -type f` 输出）+ 文件总数 + 总字节
 - 排除了哪些重要文件以及原因
 - 即将作为 `session_id` 的值
@@ -196,7 +178,7 @@ files = [
 - `name` 用相对 `backflow/<task-slug>/` 的 posix 路径（如 `source.md`、`workspace/progress.md`、`workspace/logs/profile.txt`）
 - `name` 不能以 `/` 开头、不能含 `..` 段（server 端会拒）
 - `content` 一律是 base64 编码的字节（文本或二进制都用同一编码，server 端字节级还原）
-- 顶层必须有 `source.md`，否则 server 端拒绝
+- 顶层必须有 `<task-slug>.md`，否则 server 端拒绝
 - 跳过 `.git/`、`.DS_Store`、`__pycache__/`、`*.pyc`、`*.tmp` 等噪声
 - 单文件超过 ~5 MB 时停下问用户（base64 后变 ~6.7 MB 流量）
 
