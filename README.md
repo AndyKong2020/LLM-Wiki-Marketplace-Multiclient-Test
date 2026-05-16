@@ -26,6 +26,20 @@ claude plugin install llm-wiki-client@llm-wiki --scope user
 /wiki-mount
 ```
 
+如果本机以前添加过旧 marketplace（`AndyKong2020/LLM-Wiki-Marketplace`），先切到 Cloud 仓：
+
+```bash
+claude plugin marketplace remove llm-wiki
+claude plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Cloud --scope user
+claude plugin install llm-wiki-client@llm-wiki --scope user
+```
+
+如果插件已经在当前 Claude Code 会话中加载过，安装或更新后运行：
+
+```text
+/reload-plugins
+```
+
 `/wiki-mount` 会：
 
 1. 探活云端 MCP（调用一次 `wiki_search`）确认链路通。
@@ -62,3 +76,18 @@ claude plugin validate plugins/llm-wiki-client
 - `plugins/llm-wiki-client/.claude-plugin/plugin.json`
 
 修改插件 `.mcp.json` 后，已安装的用户需要在会话中跑 `/reload-plugins`（无需退出 Claude Code）即可拿到新配置。
+
+## Smoke Test
+
+安装后可以让 Claude Code 调一次远程 MCP。期望工具能返回页面，并且图片 URL 使用 HTTPS 域名：
+
+```text
+SEARCH_OK
+PAGE_OK
+ASSET_URL=https://wiki.andykong.top/assets/...
+```
+
+当前已验证路径：
+
+- 全新临时配置可以 `marketplace add` + `plugin install` 成功；公共仓会通过 HTTPS clone，不需要 SSH。
+- `ccglm` 测试配置从旧 marketplace 切到 Cloud 仓后，不手写 `--mcp-config` 也能通过插件自带 `.mcp.json` 访问 `https://wiki.andykong.top/mcp`。

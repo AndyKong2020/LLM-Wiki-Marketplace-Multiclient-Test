@@ -13,6 +13,16 @@ claude plugin install llm-wiki-client@llm-wiki --scope user
 
 安装那一刻插件 `.mcp.json` 会被 Claude Code 加载，`cann-infer-wiki` MCP server 自动注册到客户端配置；URL 默认 `https://wiki.andykong.top/mcp`。
 
+如果之前安装的是旧 marketplace：
+
+```bash
+claude plugin marketplace remove llm-wiki
+claude plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Cloud --scope user
+claude plugin install llm-wiki-client@llm-wiki --scope user
+```
+
+当前会话已经启动时，安装或更新后运行 `/reload-plugins`。
+
 ## Commands
 
 - `/wiki-mount`：验证云端 MCP 可达，并在项目 `CLAUDE.md` 写入 LLM-WIKI pin block。
@@ -37,3 +47,19 @@ https://wiki.andykong.top/mcp
 - `.mcp.json`：插件 root，自动注册云端 `cann-infer-wiki` MCP server（HTTP transport，HTTPS URL `https://wiki.andykong.top/mcp`）
 
 MCP server 由云端托管，客户端永远通过 MCP 工具（`wiki_search` / `wiki_get_page`）访问 wiki，不绕开走本地文件。回流上传会在后续私有上传/鉴权入口接入后恢复。
+
+## Verification
+
+运行 `/wiki-mount` 后，预期远程 MCP probe 成功，并在项目 `CLAUDE.md` 写入 pin block。直接用 MCP 查询时，预期页面图片链接是：
+
+```text
+https://wiki.andykong.top/assets/...
+```
+
+公开只读 MVP 的工具列表应只包含：
+
+```text
+wiki_search
+wiki_get_page
+wiki_get_index
+```
