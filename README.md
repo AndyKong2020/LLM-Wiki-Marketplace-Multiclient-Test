@@ -18,7 +18,7 @@ claude plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Cloud --scope us
 claude plugin install llm-wiki-client@llm-wiki --scope user
 ```
 
-安装那一刻插件自带的 `.mcp.json` 被 Claude Code 加载，`cann-infer-wiki` MCP server 自动注册到客户端配置（HTTP，URL `http://124.220.212.101/mcp`）。
+安装那一刻插件自带的 `.mcp.json` 被 Claude Code 加载，`cann-infer-wiki` MCP server 自动注册到客户端配置（HTTP transport，HTTPS URL `https://wiki.andykong.top/mcp`）。
 
 安装后在需要使用 wiki 的项目中执行：
 

@@ -15,7 +15,7 @@ MCP 客户端配置由插件 root 的 `.mcp.json` 自带，安装插件后自动
 
 ```text
 mcp_server: cann-infer-wiki
-mcp_url:    http://124.220.212.101/mcp
+mcp_url:    https://wiki.andykong.top/mcp
 mode:       cloud-only read
 ```
 
@@ -62,7 +62,7 @@ mcp__cann-infer-wiki__wiki_search(query="mount probe", limit=1)
 ```md
 <!-- LLM-WIKI:BEGIN -->
 本项目已挂载云端 CANN-Infer-Wiki（NPU 大模型推理优化知识库）。
-mcp_url: http://124.220.212.101/mcp
+mcp_url: https://wiki.andykong.top/mcp
 mode: cloud-only-read
 
 在以下场景必须优先查询 wiki：
@@ -89,7 +89,7 @@ mount 结束后按顺序输出：
 
 ```text
 mcp_mode=cloud-only-read
-mcp_url=http://124.220.212.101/mcp
+mcp_url=https://wiki.andykong.top/mcp
 mcp_probe=rpc_ok | tool_not_found_reload_required | failed
 pin_status=created | updated | already_current | broken
 claude_md=<absolute path>

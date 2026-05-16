@@ -11,7 +11,7 @@ claude plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Cloud --scope us
 claude plugin install llm-wiki-client@llm-wiki --scope user
 ```
 
-安装那一刻插件 `.mcp.json` 会被 Claude Code 加载，`cann-infer-wiki` MCP server 自动注册到客户端配置；URL 默认 `http://124.220.212.101/mcp`。
+安装那一刻插件 `.mcp.json` 会被 Claude Code 加载，`cann-infer-wiki` MCP server 自动注册到客户端配置；URL 默认 `https://wiki.andykong.top/mcp`。
 
 ## Commands
 
@@ -23,7 +23,7 @@ claude plugin install llm-wiki-client@llm-wiki --scope user
 ## Fixed MCP Endpoint
 
 ```text
-http://124.220.212.101/mcp
+https://wiki.andykong.top/mcp
 ```
 
 客户端不 clone wiki 仓、不启动本机 server、不需要 GitCode 权限或 SSH key。当前 MVP 云端服务是匿名只读，不暴露 `wiki_submit_trajectory`；backflow 先只做本地归档。
@@ -34,6 +34,6 @@ http://124.220.212.101/mcp
 
 - `commands/`：`wiki-mount.md`、`wiki-backflow.md` 两个 slash 入口
 - `skills/`：`llm-wiki-mount`、`llm-wiki-query`、`llm-wiki-backflow` 三个 skill，承载流程规则
-- `.mcp.json`：插件 root，自动注册云端 `cann-infer-wiki` MCP server（HTTP transport，URL `http://124.220.212.101/mcp`）
+- `.mcp.json`：插件 root，自动注册云端 `cann-infer-wiki` MCP server（HTTP transport，HTTPS URL `https://wiki.andykong.top/mcp`）
 
 MCP server 由云端托管，客户端永远通过 MCP 工具（`wiki_search` / `wiki_get_page`）访问 wiki，不绕开走本地文件。回流上传会在后续私有上传/鉴权入口接入后恢复。

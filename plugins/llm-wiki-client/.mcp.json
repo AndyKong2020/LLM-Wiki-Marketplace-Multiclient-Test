@@ -2,7 +2,7 @@
   "mcpServers": {
     "cann-infer-wiki": {
       "type": "http",
-      "url": "http://124.220.212.101/mcp"
+      "url": "https://wiki.andykong.top/mcp"
     }
   }
 }
