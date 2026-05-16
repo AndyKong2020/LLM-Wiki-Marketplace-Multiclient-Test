@@ -158,7 +158,7 @@ backflow/<task-slug>/
 
 ## 2. 轨迹上传（后续启用）
 
-当前云端只读 MVP 不执行本节；本节作为后续私有上传/鉴权入口的保留流程。只有当插件配置明确提供可用的 `mcp__cann-infer-wiki-cloud__wiki_submit_trajectory` 工具，并且用户确认开启回流时，才进入下面步骤。
+当前云端只读 MVP 不执行本节；本节作为后续私有上传/鉴权入口的保留流程。只有当插件配置明确提供可用的 `mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_submit_trajectory` 工具，并且用户确认开启回流时，才进入下面步骤。
 
 轨迹上传只在用户确认后执行。上传走 MCP 工具 `wiki_submit_trajectory`——单次调用把整个 `backflow/<task-slug>/` 目录的文件原样送到 server 端的 `sources/sessions/uploaded/<session_id>/`，server 端 monitor 接力跑 ingest pipeline。
 
@@ -214,7 +214,7 @@ assert "/" not in session_id and "\\" not in session_id, f"session_id must not c
 ### 2.2 调用 wiki_submit_trajectory
 
 ```text
-mcp__cann-infer-wiki-cloud__wiki_submit_trajectory(
+mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_submit_trajectory(
     session_id="<task-slug>",
     files=[ ... ]
 )

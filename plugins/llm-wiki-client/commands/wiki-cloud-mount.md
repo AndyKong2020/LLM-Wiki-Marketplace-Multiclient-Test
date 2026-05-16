@@ -1,6 +1,6 @@
 ---
 description: 为当前项目挂载云端 CANN-Infer-Wiki MCP（验证远程工具 + 写入 CLAUDE.md pin block）
-allowed-tools: Read Edit Write mcp__cann-infer-wiki-cloud__wiki_search
+allowed-tools: Read Edit Write mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_search
 ---
 
 使用 `llm-wiki-cloud-mount` skill 为当前项目执行 mount。

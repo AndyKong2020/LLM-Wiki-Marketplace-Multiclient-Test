@@ -1,7 +1,7 @@
 ---
 name: llm-wiki-cloud-query
 description: 查询和运行时消费已挂载的 CANN-Infer-Wiki（通过 MCP）。进入新的 LLM/NPU 推理优化阶段、做方案分析、策略选择、debug 调试、性能/精度回归分析；涉及具体 model / kernel / parallelism / module / framework / technique / quantization / platform 知识、或动态层任务回流型经验时使用。
-allowed-tools: Read Edit Write mcp__cann-infer-wiki-cloud__wiki_search mcp__cann-infer-wiki-cloud__wiki_get_page
+allowed-tools: Read Edit Write mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_search mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_get_page
 version: 0.3.0
 ---
 
@@ -24,7 +24,7 @@ version: 0.3.0
 
 ## 2. 重要原则
 
-**通过 MCP 查询**。永远通过 `mcp__cann-infer-wiki-cloud__wiki_search` 与 `mcp__cann-infer-wiki-cloud__wiki_get_page` 获取知识。
+**通过 MCP 查询**。永远通过 `mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_search` 与 `mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_get_page` 获取知识。
 
 `wiki_search` 返回 `warning`（retriever 失败）→ 据实上报给用户与 progress.md。
 
@@ -62,7 +62,7 @@ wiki_search(query="...", tags=["fia", "decode"], limit=5)
 ### 3.2 wiki_search
 
 ```text
-mcp__cann-infer-wiki-cloud__wiki_search(query="<上一节拟好的 query>", limit=5)
+mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_search(query="<上一节拟好的 query>", limit=5)
 ```
 
 返回 `{results: [{id, summary, tags, score, qValue}, ...], total}`。这就是 server 已经排好序的 topK，**直接用**：
@@ -75,7 +75,7 @@ mcp__cann-infer-wiki-cloud__wiki_search(query="<上一节拟好的 query>", limi
 ### 3.3 wiki_get_page
 
 ```text
-mcp__cann-infer-wiki-cloud__wiki_get_page(
+mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_get_page(
     ids=["wiki_static_cann-infer_models_qwen3-moe_md", ...]
 )
 ```

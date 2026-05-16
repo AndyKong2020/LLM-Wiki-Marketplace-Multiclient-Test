@@ -1,7 +1,7 @@
 ---
 name: llm-wiki-cloud-mount
 description: 为当前项目挂载云端 CANN-Infer-Wiki（NPU 大模型推理优化知识库）。验证插件自带的远程 MCP 可用，并在项目 CLAUDE.md 写入 LLM-WIKI pin block。
-allowed-tools: Read Edit Write mcp__cann-infer-wiki-cloud__wiki_search
+allowed-tools: Read Edit Write mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_search
 version: 0.5.0
 ---
 
@@ -39,7 +39,7 @@ mode:       cloud-only read
 先确认 MCP tools 在本次会话可见、可用。直接调用：
 
 ```text
-mcp__cann-infer-wiki-cloud__wiki_search(query="mount probe", limit=1)
+mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_search(query="mount probe", limit=1)
 ```
 
 处理规则：
@@ -71,7 +71,7 @@ mode: cloud-only-read
 - debug 调试、性能或精度异常排查、错误模式归因
 - 涉及具体模型族、算子、并行策略、推理框架、优化技术、量化或硬件平台知识
 
-知识检索一律通过 MCP 工具：mcp__cann-infer-wiki-cloud__wiki_search、mcp__cann-infer-wiki-cloud__wiki_get_page。
+知识检索一律通过 MCP 工具：mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_search、mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_get_page。
 需要引用图片时，使用 wiki_get_page 返回 content 中的 /assets HTTP URL 或 assets manifest。
 不要读取或 clone wiki 仓库；当前云端服务是匿名只读，不支持 `wiki_submit_trajectory` 上传。`/wiki-cloud-backflow` 仅保留本地归档流程，后续私有上传入口接入后再启用上传。
 <!-- LLM-WIKI:END -->
