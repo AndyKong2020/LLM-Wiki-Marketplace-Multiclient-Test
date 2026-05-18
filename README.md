@@ -110,4 +110,4 @@ ASSET_URL=https://wiki.andykong.top/assets/...
 
 - 全新临时配置可以 `marketplace add` + `plugin install` 成功；公共仓会通过 HTTPS clone，不需要 SSH。
 - `ccglm` 测试配置从旧 marketplace 切到 Cloud 仓后，不手写 `--mcp-config` 也能通过插件自带 `.mcp.json` 访问 `https://wiki.andykong.top/mcp`。
-- 服务器容器里的真实 Claude 项目级安装已验证：`llm-wiki-client@llm-wiki-cloud` 0.4.3 能调用 MCP、获取 HTTPS asset URL、下载图片并用 Read 读图。
+- 服务器容器里的真实 Claude 项目级安装已验证：`llm-wiki-client@llm-wiki-cloud` 1.0.0 能调用 MCP、获取 HTTPS asset URL、下载图片并用 Read 读图。
