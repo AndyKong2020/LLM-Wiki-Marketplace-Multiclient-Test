@@ -77,6 +77,8 @@ The upload flow keeps the local archive and creates a tar.gz copy from:
 
 The package is created from the contents of that archive root, must contain exactly one top-level `.md` file, and must be no larger than 50 MiB compressed. The server response uses:
 
+On macOS, the plugin recipe sets `COPYFILE_DISABLE=1` when creating the archive so Finder/resource-fork metadata such as `._source.md` is not included in the upload package.
+
 | `status` | Meaning |
 |---|---|
 | `ok` | Package accepted; report `id`, `path`, and `entrypoint` when present. |

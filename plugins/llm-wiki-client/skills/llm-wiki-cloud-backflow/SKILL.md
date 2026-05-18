@@ -208,8 +208,12 @@ pkg_dir="/tmp/llm-wiki-backflow-upload"
 pkg="${pkg_dir}/${task_slug}.tar.gz"
 
 mkdir -p "$pkg_dir"
-tar -czf "$pkg" -C "$archive_root" .
+COPYFILE_DISABLE=1 tar -czf "$pkg" -C "$archive_root" .
 ```
+
+`COPYFILE_DISABLE=1` 是给 macOS/BSD tar 的必要保护，避免把资源叉写成
+`._source.md` 这类 AppleDouble 文件；这些文件会让 server 误判顶层存在多个
+`.md`。
 
 打包前后确认：
 
