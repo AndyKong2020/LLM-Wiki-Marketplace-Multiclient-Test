@@ -1,113 +1,149 @@
 # LLM-Wiki Marketplace
 
-本仓库是 **CANN-Infer-Wiki**（NPU 大模型推理优化知识库）的 Claude Code 云端客户端插件市场，只维护用户端插件和安装入口。Wiki 知识库内容与云端 MCP 服务由独立仓库维护，用户端不 clone wiki 仓、不启动本机 server。
+本仓库是 **CANN-Infer-Wiki** 的 Claude Code 云端客户端插件市场。这里
+只维护客户端插件、commands、skills、marketplace manifest 和插件自带的
+`.mcp.json`；wiki 内容、MCP server、ingest、上传 token 和部署运维都在云端
+服务仓维护。
 
-> Cloud marketplace 名字是 `llm-wiki-cloud`，插件安装目标是 `llm-wiki-client@llm-wiki-cloud`。这样它可以和旧的本地版 `llm-wiki-client@llm-wiki` 并存，不会抢同一个 marketplace/plugin 解析入口。
+Marketplace 名称：`llm-wiki-cloud`
+插件安装目标：`llm-wiki-client@llm-wiki-cloud`
+
+Cloud 版和旧本地版 `llm-wiki-client@llm-wiki` 使用不同 marketplace 名称，
+可以在迁移期并存。
 
 ## 安装
 
-日常使用可以装到 user scope：
-
-添加 marketplace：
+日常 user-scope 安装：
 
 ```bash
 claude plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Cloud --scope user
-```
-
-安装客户端插件：
-
-```bash
 claude plugin install llm-wiki-client@llm-wiki-cloud --scope user
 ```
 
-安装那一刻插件自带的 `.mcp.json` 被 Claude Code 加载，`cann-infer-wiki-cloud` MCP server 自动注册到客户端配置（HTTP transport，HTTPS URL `https://wiki.andykong.top/mcp`）。
-
-如果只想在某个项目里测试，不改全局插件状态，使用 project scope：
+隔离 project-scope 测试：
 
 ```bash
 claude plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Cloud --scope project
 claude plugin install llm-wiki-client@llm-wiki-cloud --scope project
 ```
 
-安装后在需要使用 wiki 的项目中执行：
-
-```text
-/wiki-cloud-mount
-```
-
-如果本机以前添加过旧 marketplace（`AndyKong2020/LLM-Wiki-Marketplace`），不需要删除旧 marketplace；Cloud 版使用独立名字和独立命令。若旧插件仍处于 enabled，建议先禁用旧版，避免 agent 同时看到新旧两套 wiki 入口：
+如果旧本地插件仍处于 enabled，建议禁用，避免 agent 同时看到两套 wiki 入口：
 
 ```bash
 claude plugin disable llm-wiki-client@llm-wiki --scope user
-claude plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Cloud --scope user
-claude plugin install llm-wiki-client@llm-wiki-cloud --scope user
 ```
 
-如果插件已经在当前 Claude Code 会话中加载过，安装或更新后运行：
+当前 Claude Code 会话已启动时，安装或更新后运行：
 
 ```text
 /reload-plugins
 ```
 
-更新 Cloud 插件：
+更新：
 
 ```bash
 claude plugin update llm-wiki-client@llm-wiki-cloud --scope user
 ```
 
-如果是 project scope 安装，把 `--scope user` 换成 `--scope project`。
+project-scope 安装把 `--scope user` 换成 `--scope project`。
 
-`/wiki-cloud-mount` 会：
+## 用户流程
 
-1. 探活云端 MCP（调用一次 `wiki_search`）确认链路通。
-2. 在项目 `CLAUDE.md` 写入 `<!-- LLM-WIKI:BEGIN -->...<!-- LLM-WIKI:END -->` pin block，告诉 agent 何时调 wiki。
+1. 在项目中运行 `/wiki-cloud-mount`。它会探活远程 MCP，并向 `CLAUDE.md`
+   写入 LLM-WIKI pin block。
+2. 正常工作。任务进入 LLM/NPU 推理优化相关阶段时，`llm-wiki-cloud-query`
+   skill 通过 MCP tools 查询 wiki。
+3. 任务结束后运行 `/wiki-cloud-backflow` 创建本地任务归档。若用户确认且配置了
+   `LLM_WIKI_UPLOAD_TOKEN`，插件会通过私有 HTTP backflow 入口上传归档。
 
-后续真实任务结束后，可以使用 `/wiki-cloud-backflow` 创建本地任务现场归档。当前云端只读 MVP 不暴露 `wiki_submit_trajectory`，所以默认停在上传前；回流上传流程保留在插件内，等后续私有上传/鉴权入口接上后恢复。
+固定入口：
 
-当 agent 需要理解 wiki 页面里的图片内容时，插件规则要求先下载 `https://wiki.andykong.top/assets/...` 到本地临时目录 `/tmp/llm-wiki-assets/<page-id>/<filename>`，再用 Claude Code 的 Read 工具读取图片；不要只凭 URL、文件名或 alt 文本推断。
+```text
+MCP read:        https://wiki.andykong.top/mcp
+Backflow upload: https://wiki.andykong.top/upload/backflow
+Assets:          https://wiki.andykong.top/assets/...
+```
+
+Backflow 上传是可选的 token-gated 能力：
+
+```bash
+export LLM_WIKI_UPLOAD_TOKEN="llmw_<token-from-operator>"
+```
+
+Token 由 operator 通过仓库外渠道分发。不要提交 token，不要把 token 写入归档，
+也不要粘贴到日志里。
+
+需要理解 wiki 图片内容时，query skill 会把
+`https://wiki.andykong.top/assets/...` 下载到
+`/tmp/llm-wiki-assets/<page-id>/<filename>`，再用 Claude Code 的 Read 工具读取；
+不要只凭 URL、文件名、alt 文本或上下文推断图片内容。
 
 ## 仓库边界
 
-- **LLM-Wiki-Marketplace-Cloud（本仓库）**：维护 Claude Code 插件、commands、skills、`.mcp.json` 客户端配置和 marketplace manifest。
-- **CANN-Infer-Wiki-Cloud**：维护知识库内容、MCP server、ingest 引擎和云端部署配置。
-- 插件通常很少更新；wiki 内容和 server 端模型/索引升级由云端服务维护，不需要用户侧重发插件。
+- **本仓库**：Claude Code marketplace manifest、plugin manifest、`.mcp.json`、
+  slash commands 和 skills。
+- **CANN-Infer-Wiki 云服务仓**：wiki 内容、MCP server、assets、ingest、
+  上传 token store、部署脚本和运维文档。
+- **普通用户**：只安装插件；不 clone wiki 仓、不启动本机 server、不需要
+  GitCode/SSH 权限。
 
-## 本地开发
+## 目录结构
 
-本地调试 marketplace：
-
-```bash
-cd /path/to/LLM-Wiki-Marketplace
-claude plugin marketplace add "$(pwd)" --scope user
-claude plugin install llm-wiki-client@llm-wiki-cloud --scope user
+```text
+.claude-plugin/marketplace.json
+plugins/llm-wiki-client/
+  .claude-plugin/plugin.json
+  .mcp.json
+  README.md
+  commands/
+    wiki-cloud-mount.md
+    wiki-cloud-backflow.md
+  skills/
+    llm-wiki-cloud-mount/SKILL.md
+    llm-wiki-cloud-query/SKILL.md
+    llm-wiki-cloud-backflow/SKILL.md
 ```
 
-修改插件后执行校验：
+## 维护
+
+提交前校验：
 
 ```bash
 claude plugin validate .
 claude plugin validate plugins/llm-wiki-client
 ```
 
-发布新版本时，需要同步更新：
+修改插件行为或发布用户可见版本时，同步更新：
 
 - `.claude-plugin/marketplace.json`
 - `plugins/llm-wiki-client/.claude-plugin/plugin.json`
+- `plugins/llm-wiki-client/skills/*/SKILL.md` 的 frontmatter version
 
-修改插件 `.mcp.json` 后，已安装的用户需要在会话中跑 `/reload-plugins`（无需退出 Claude Code）即可拿到新配置。
+如果改了 `.mcp.json`，已运行的 Claude Code 会话需要 `/reload-plugins` 才会加载
+新的 MCP 配置。
 
 ## Smoke Test
 
-安装后可以让 Claude Code 调一次远程 MCP。期望工具能返回页面，并且图片 URL 使用 HTTPS 域名：
+安装后预期：
 
 ```text
-SEARCH_OK
-PAGE_OK
-ASSET_URL=https://wiki.andykong.top/assets/...
+/wiki-cloud-mount
+mcp_probe=rpc_ok
 ```
 
-当前已验证路径：
+MCP tools 应包含：
 
-- 全新临时配置可以 `marketplace add` + `plugin install` 成功；公共仓会通过 HTTPS clone，不需要 SSH。
-- `ccglm` 测试配置从旧 marketplace 切到 Cloud 仓后，不手写 `--mcp-config` 也能通过插件自带 `.mcp.json` 访问 `https://wiki.andykong.top/mcp`。
-- 服务器容器里的真实 Claude 项目级安装已验证：`llm-wiki-client@llm-wiki-cloud` 1.0.0 能调用 MCP、获取 HTTPS asset URL、下载图片并用 Read 读图。
+```text
+wiki_search
+wiki_get_page
+wiki_get_index
+```
+
+页面图片应使用 HTTPS asset URL：
+
+```text
+https://wiki.andykong.top/assets/...
+```
+
+当前已验证路径：全新 project-scope 安装可以访问 `https://wiki.andykong.top/mcp`，
+获取 HTTPS asset URL，下载图片到本地，并用 Claude Code Read 工具读图。

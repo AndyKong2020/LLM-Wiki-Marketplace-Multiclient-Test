@@ -73,7 +73,7 @@ mode: cloud-only-read
 
 知识检索一律通过 MCP 工具：mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_search、mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_get_page。
 需要引用图片时，使用 wiki_get_page 返回 content 中的 /assets HTTP URL 或 assets manifest。
-不要读取或 clone wiki 仓库；当前云端服务是匿名只读，不支持 `wiki_submit_trajectory` 上传。`/wiki-cloud-backflow` 仅保留本地归档流程，后续私有上传入口接入后再启用上传。
+不要读取或 clone wiki 仓库；当前 MCP 服务是匿名只读，不支持 `wiki_submit_trajectory`。任务回流使用 `/wiki-cloud-backflow`，在用户确认且配置 `LLM_WIKI_UPLOAD_TOKEN` 后通过私有 HTTP 入口上传。
 <!-- LLM-WIKI:END -->
 ```
 
