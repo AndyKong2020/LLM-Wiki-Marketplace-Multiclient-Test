@@ -2,7 +2,7 @@
 name: llm-wiki-cloud-mount
 description: 为当前项目挂载云端 CANN-Infer-Wiki（NPU 大模型推理优化知识库）。验证插件自带的远程 MCP 可用，并在项目 CLAUDE.md 写入 LLM-WIKI pin block。
 allowed-tools: Read Edit Write mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_search
-version: 1.0.0
+version: 1.0.1
 ---
 
 # LLM-Wiki Mount

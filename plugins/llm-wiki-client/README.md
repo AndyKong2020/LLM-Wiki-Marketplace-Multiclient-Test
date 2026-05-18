@@ -23,8 +23,7 @@ Backflow upload: https://wiki.andykong.top/upload/backflow
 Assets:          https://wiki.andykong.top/assets/...
 ```
 
-客户端不 clone wiki 仓、不启动本机 server、不需要 GitCode/SSH 权限。MCP 读取
-匿名可用；backflow 写入走独立的 token-gated HTTPS 请求。
+MCP 读取匿名可用；backflow 写入走独立的 token-gated HTTPS 请求。
 
 ## Backflow Upload
 

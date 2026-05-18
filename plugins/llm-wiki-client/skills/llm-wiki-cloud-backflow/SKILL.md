@@ -2,7 +2,7 @@
 name: llm-wiki-cloud-backflow
 description: 任务结束后使用。无参数触发，由 agent 判断 task slug 和 workspace，在本地归档真实任务轨迹；如配置 LLM_WIKI_UPLOAD_TOKEN 则通过私有 HTTP 入口上传。
 allowed-tools: Bash Read Write
-version: 1.0.0
+version: 1.0.1
 ---
 
 # LLM-Wiki Backflow
@@ -24,8 +24,6 @@ version: 1.0.0
 轨迹归档在本地完成，不要求用户提供参数。agent 根据当前任务上下文判断 `task-slug` 和 workspace。
 
 ### 1.1 判断 Task Slug 和 Workspace
-
-不要要求 `/wiki-cloud-backflow` 传入参数。流程核心是确定 `task-slug`，不是确定 task name。
 
 `task-slug` 固定为：
 
@@ -77,8 +75,7 @@ workspace 判断：
 .claude/llm-wiki/backflow/<task-slug>/
 ```
 
-**这个目录的内容就是后续 tar.gz 上传包的根目录**——顶层必有且只能有一个 `.md` 文件（通常是 `<task-slug>.md`），其余文件可以任意命名、任意多级嵌套。Server 端会原样保留树结构落到 `sources/sessions/uploaded/<server-id>/`，再由 ingest 异步加工。
-
+**这个目录的内容就是后续 tar.gz 上传包的根目录**——顶层必有且只能有一个 `.md` 文件（通常是 `<task-slug>.md`），其余文件可以任意命名、任意多级嵌套。
 
 归档目录至少包含：
 
@@ -93,7 +90,7 @@ workspace 判断：
 
 - 先创建 `workspace/`，把所有相关的任务材料复制进去（保留必要的子目录结构），默认直接复制任务目录，并排除大文件。
 - 如果 workspace 是 git 仓库，可以把 `git status --short` 或 `git diff --no-ext-diff -- .` 保存为普通 workspace 文件。
-- 不固定创建 `patches/` 目录；是否保存 diff、保存到哪里，根据当前任务判断。
+- 是否保存 diff、保存到哪里，根据当前任务判断。
 - **不要**在归档目录里放真正的二进制（模型权重、profiler raw、大压缩包）。
 
 ### 1.4 编写顶层 <task-slug>.md
@@ -332,4 +329,4 @@ fi
 | `status: error` | 原样汇报 `error` 和 `message`；保留本地 archive，按 message 修正后再由用户决定是否重试。 |
 | 非 JSON 或无法解析 | 打印简短 raw response（不得包含 token），说明本地 archive 仍保留。 |
 
-不要伪造成功响应；不要对 `status: error` 的响应抑制错误信息后伪装成功。Server 只负责把完整包发布到 `sources/sessions/uploaded/`；后续 monitor / ingest 是异步流程。
+不要伪造成功响应；不要对 `status: error` 的响应抑制错误信息后伪装成功。
