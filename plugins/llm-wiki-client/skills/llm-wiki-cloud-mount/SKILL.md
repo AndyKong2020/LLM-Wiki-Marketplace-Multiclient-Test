@@ -135,17 +135,18 @@ mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_search(query="mount prob
 <!-- LLM-WIKI:BEGIN -->
 本项目已挂载云端 CANN-Infer-Wiki（NPU 大模型推理优化知识库）。
 mcp_url: https://wiki.andykong.top/mcp
-mode: cloud-only-read
 
-在以下场景必须优先查询 wiki：
-- 进入新的 LLM/NPU 推理优化阶段：bringup、profiling、kernel tuning、并行策略调整、显存优化、回归定位
-- 做方案分析、策略选择、实现路线判断
-- debug 调试、性能或精度异常排查、错误模式归因
-- 涉及具体模型族、算子、并行策略、推理框架、优化技术、量化或硬件平台知识
+涉及下列任务时必须使用 llm-wiki-query skill：
+- 大模型推理优化任务：model / kernel / parallelism / module / framework / technique / quantization / platform
+  （模型族 qwen3-moe / deepseek-r1 / hunyuan-* / longcat-* / kimi-k2 等；算子 fia / mla / dia / sparse-flash-attention 等；并行 tp / dp / cp / ep / zigzag-cp / ulysses 等；框架 sglang / torchair / pypto / ascendc / atb / catlass / tilelang 等；技术 npu-graph-mode / weight-prefetch / superkernel / afd 等；量化 w8a8c8 / w4a8c8 / mxfp8 / fp8-attention 等；平台 atlas-a3 / ascend910 等）
+- 进入新优化阶段、做方案分析、策略选择、debug 调试、性能/精度回归归因时
+
+涉及 subagent 时，必须将 llm-wiki-query skill 的使用说明注入到拉起 subagent 的 prompt 中。
 
 知识检索一律通过 MCP 工具：mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_search、mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_get_page。
 需要引用图片时，使用 wiki_get_page 返回 content 中的 /assets HTTP URL 或 assets manifest。
-不要读取或 clone wiki 仓库；当前 MCP 服务是匿名只读，不支持 `wiki_submit_trajectory`。任务回流使用 `/wiki-cloud-backflow`，在用户确认且配置 `LLM_WIKI_UPLOAD_TOKEN` 后通过私有 HTTP 入口上传。
+
+每次使用 llm-wiki-query 后，必须把页面级记录写到当前阶段 progress.md 同级的 wiki_usage.md，并把查询摘要同步写入 progress.md。
 <!-- LLM-WIKI:END -->
 ```
 
