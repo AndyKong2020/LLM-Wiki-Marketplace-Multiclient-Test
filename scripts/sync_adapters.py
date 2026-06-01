@@ -122,6 +122,7 @@ def clean_generated_dirs() -> None:
         ".agents",
         "dist/opencode",
         "plugins/llm-wiki-client/.codex-plugin",
+        "plugins/llm-wiki-client/codex",
     ]:
         path = ROOT / rel
         if path.exists():
@@ -203,6 +204,7 @@ def generate_skills(values: dict[str, str], output_root: str) -> None:
 def main() -> None:
     base_values = load_values()
     claude = platform_values(base_values, "claude")
+    codex = platform_values(base_values, "codex")
     opencode = platform_values(base_values, "opencode")
 
     clean_generated_dirs()
@@ -210,6 +212,7 @@ def main() -> None:
     generate_commands(claude, "plugins/llm-wiki-client/commands")
     generate_commands(opencode, "dist/opencode/.opencode/commands")
     generate_skills(claude, "plugins/llm-wiki-client/skills")
+    generate_skills(codex, "plugins/llm-wiki-client/codex/skills")
     generate_skills(opencode, "dist/opencode/.opencode/skills")
 
 

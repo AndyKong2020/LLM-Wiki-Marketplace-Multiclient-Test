@@ -110,6 +110,9 @@ class SyncAdaptersTests(unittest.TestCase):
             "plugins/llm-wiki-client/skills/llm-wiki-cloud-mount/SKILL.md",
             "plugins/llm-wiki-client/skills/llm-wiki-cloud-query/SKILL.md",
             "plugins/llm-wiki-client/skills/llm-wiki-cloud-backflow/SKILL.md",
+            "plugins/llm-wiki-client/codex/skills/llm-wiki-cloud-mount/SKILL.md",
+            "plugins/llm-wiki-client/codex/skills/llm-wiki-cloud-query/SKILL.md",
+            "plugins/llm-wiki-client/codex/skills/llm-wiki-cloud-backflow/SKILL.md",
             "dist/opencode/opencode.json",
             "dist/opencode/install-opencode.sh",
             "dist/opencode/.opencode/commands/wiki-cloud-mount.md",
@@ -126,10 +129,13 @@ class SyncAdaptersTests(unittest.TestCase):
         self.run_sync()
         generated = [
             "plugins/llm-wiki-client/skills/llm-wiki-cloud-mount/SKILL.md",
+            "plugins/llm-wiki-client/codex/skills/llm-wiki-cloud-mount/SKILL.md",
             "dist/opencode/.opencode/skills/llm-wiki-cloud-mount/SKILL.md",
         ]
         for rel in generated:
-            text = (ROOT / rel).read_text(encoding="utf-8")
+            path = ROOT / rel
+            self.assertTrue(path.exists(), rel)
+            text = path.read_text(encoding="utf-8")
             self.assertNotIn("{{", text)
             self.assertNotIn("}}", text)
             self.assertIn("version: 1.1.6", text)
@@ -138,10 +144,31 @@ class SyncAdaptersTests(unittest.TestCase):
     def test_sync_generates_platform_specific_instruction_targets(self):
         self.run_sync()
         claude_mount = (ROOT / "plugins/llm-wiki-client/skills/llm-wiki-cloud-mount/SKILL.md").read_text(encoding="utf-8")
+        codex_mount_path = ROOT / "plugins/llm-wiki-client/codex/skills/llm-wiki-cloud-mount/SKILL.md"
+        self.assertTrue(codex_mount_path.exists())
+        codex_mount = codex_mount_path.read_text(encoding="utf-8")
         opencode_mount = (ROOT / "dist/opencode/.opencode/skills/llm-wiki-cloud-mount/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("CLAUDE.md", claude_mount)
+        self.assertIn("AGENTS.md", codex_mount)
         self.assertIn("AGENTS.md", opencode_mount)
+        self.assertNotIn("mcp__plugin_llm-wiki-client", codex_mount)
         self.assertNotIn("mcp__plugin_llm-wiki-client", opencode_mount)
+
+    def test_sync_generates_codex_specific_skill_root(self):
+        self.run_sync()
+        codex_manifest = json.loads(
+            (ROOT / "plugins/llm-wiki-client/.codex-plugin/plugin.json").read_text(encoding="utf-8")
+        )
+        self.assertIn("skills", codex_manifest)
+        self.assertEqual(codex_manifest["skills"], "./codex/skills/")
+
+        codex_mount_path = ROOT / "plugins/llm-wiki-client/codex/skills/llm-wiki-cloud-mount/SKILL.md"
+        self.assertTrue(codex_mount_path.exists())
+        codex_mount = codex_mount_path.read_text(encoding="utf-8")
+        self.assertIn("AGENTS.md", codex_mount)
+        self.assertIn("cann-infer-wiki-cloud wiki_search", codex_mount)
+        self.assertNotIn("CLAUDE.md", codex_mount)
+        self.assertNotIn("mcp__plugin_llm-wiki-client", codex_mount)
 
     def test_sync_generates_valid_json_manifests(self):
         self.run_sync()
