@@ -34,6 +34,19 @@ class TemplateInventoryTests(unittest.TestCase):
             text = path.read_text(encoding="utf-8")
             self.assertNotIn("llm-wiki-query", text, path.relative_to(ROOT))
 
+    def test_shared_skill_templates_are_platform_neutral(self):
+        forbidden_phrases = [
+            "当前 Claude Code 项目目录",
+            "/plugin update",
+            "/reload-plugins",
+            "claude mcp add",
+        ]
+        for path in sorted((ROOT / "src/skills").glob("*/SKILL.md.tmpl")):
+            text = path.read_text(encoding="utf-8")
+            for phrase in forbidden_phrases:
+                with self.subTest(path=path.relative_to(ROOT), phrase=phrase):
+                    self.assertNotIn(phrase, text)
+
     def test_mount_template_uses_shared_pin_block_contract(self):
         mount_text = (ROOT / "src/skills/llm-wiki-cloud-mount/SKILL.md.tmpl").read_text(encoding="utf-8")
         pin_block_text = (ROOT / "src/shared/pin-block.md.tmpl").read_text(encoding="utf-8")
