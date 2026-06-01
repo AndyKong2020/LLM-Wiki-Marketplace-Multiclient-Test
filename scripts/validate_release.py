@@ -365,6 +365,28 @@ def run_sync_adapters(root: Path) -> None:
         fail(f"sync_adapters.py failed with exit code {result.returncode}")
 
 
+def get_untracked_generated_files() -> list[str]:
+    result = subprocess.run(
+        [
+            "git",
+            "status",
+            "--porcelain",
+            "--untracked-files=all",
+            "--",
+            *GENERATED_DIFF_PATHS,
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        if detail:
+            fail(f"git status failed while checking generated files: {detail}")
+        fail(f"git status failed while checking generated files with exit code {result.returncode}")
+    return sorted(line[3:] for line in result.stdout.splitlines() if line.startswith("?? "))
+
+
 GeneratedSnapshot = dict[str, tuple[str, int, bytes | str]]
 
 
@@ -408,6 +430,10 @@ def describe_generated_snapshot_changes(before: GeneratedSnapshot, after: Genera
 
 
 def check_generated_files_current() -> None:
+    untracked_files = get_untracked_generated_files()
+    if untracked_files:
+        fail(f"untracked generated file: {summarize_items(untracked_files)}")
+
     current_snapshot = snapshot_generated_paths(ROOT)
 
     with tempfile.TemporaryDirectory(prefix="validate-release-") as temp_dir:

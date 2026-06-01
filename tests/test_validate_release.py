@@ -92,6 +92,17 @@ class ValidateReleaseTests(unittest.TestCase):
             self.assertIn("generated files are stale", output)
             self.assertIn("modified generated outputs", output)
 
+    def test_validate_release_rejects_untracked_generated_extra_file(self):
+        with temp_repo() as repo:
+            run_sync(repo)
+            extra = repo / "plugins/llm-wiki-client/untracked-extra.txt"
+            extra.write_text("test-only untracked generated file\n", encoding="utf-8")
+
+            result = run_validate(repo)
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("untracked generated file", result.stdout + result.stderr)
+
     def test_validate_release_checks_codex_manifest_skill_root(self):
         with temp_repo() as repo:
             run_sync(repo)
@@ -152,6 +163,7 @@ class ValidateReleaseTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            subprocess.run(["git", "add", "src/skills/llm-wiki-cloud-new/SKILL.md.tmpl"], cwd=repo, check=True)
 
             result = run_validate(repo)
 
@@ -161,6 +173,7 @@ class ValidateReleaseTests(unittest.TestCase):
             self.assertIn("untracked", output)
 
             run_sync(repo)
+            subprocess.run(["git", "add", "--all"], cwd=repo, check=True)
             synced_result = run_validate(repo)
             self.assertEqual(synced_result.returncode, 0, synced_result.stdout + synced_result.stderr)
             self.assertIn("validate_release=ok", synced_result.stdout)
