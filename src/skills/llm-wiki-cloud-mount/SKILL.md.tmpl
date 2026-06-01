@@ -9,17 +9,17 @@ version: {{version}}
 
 ## 1. 概述
 
-`llm-wiki-cloud-mount` 把云端 CANN-Infer-Wiki 作为当前 Claude Code 项目的知识入口。
+`llm-wiki-cloud-mount` 把云端 CANN-Infer-Wiki 作为当前项目的知识入口。
 
-MCP 客户端配置由插件 root 的 `.mcp.json` 自带，安装插件后自动注册：
+MCP 客户端配置由当前平台 adapter 提供：
 
 ```text
-mcp_server: cann-infer-wiki-cloud
+mcp_server: {{mcp_server_name}}
 mcp_url:    {{mcp_url}}
 mode:       cloud-only read
 ```
 
-本 skill 不 clone wiki 仓、不启动本机 server、不写 `.mcp.json`、不调用 `claude mcp add`。
+本 skill 不 clone wiki 仓、不启动本机 server、不修改平台 MCP 配置、不调用本地 MCP 注册命令。
 
 整体流程：
 
@@ -98,12 +98,9 @@ PY
 plugin_version_current=<current>
 plugin_version_latest=<latest>
 
-请在 Claude Code 中运行：
-/plugin update llm-wiki-client@llm-wiki-cloud
-/reload-plugins
+请按照 README 中当前平台 adapter 的说明更新并重新加载插件。
 
-然后重新运行：
-/llm-wiki-client:llm-wiki-cloud-mount
+然后重新运行挂载入口。
 ```
 
 ## 3. STEP 2：远程 MCP Probe
@@ -120,7 +117,7 @@ plugin_version_latest=<latest>
 |---|---|
 | 返回 `results` 或空结果且无 warning | probe 通过，进入 STEP 2 |
 | 返回 `{warning: "..."}` | 输出 warning 原文，停止 mount |
-| 工具不存在 | 提示用户运行 `/reload-plugins` 后重新 `/wiki-cloud-mount` |
+| 工具不存在 | 提示用户重新加载当前平台 adapter 后重新运行挂载入口 |
 | MCP 不可达 | 提示当前云端 MCP 不可达，停止 mount |
 
 不要伪造 probe 成功；不要尝试本地启动 server 兜底。
@@ -129,26 +126,16 @@ plugin_version_latest=<latest>
 
 目标文件优先为当前项目根目录 `{{instruction_file}}`。如果不存在则创建。
 
-写入或更新这段 block：
+写入由 `src/shared/pin-block.md.tmpl` 渲染得到的 block。
 
-```md
-<!-- LLM-WIKI:BEGIN -->
-本项目已挂载云端 CANN-Infer-Wiki（NPU 大模型推理优化知识库）。
-mcp_url: {{mcp_url}}
+共享 pin block 必须使用这些 slot：
 
-涉及下列任务时必须使用 llm-wiki-query skill：
-- 大模型推理优化任务：model / kernel / parallelism / module / framework / technique / quantization / platform
-  （模型族 qwen3-moe / deepseek-r1 / hunyuan-* / longcat-* / kimi-k2 等；算子 fia / mla / dia / sparse-flash-attention 等；并行 tp / dp / cp / ep / zigzag-cp / ulysses 等；框架 sglang / torchair / pypto / ascendc / atb / catlass / tilelang 等；技术 npu-graph-mode / weight-prefetch / superkernel / afd 等；量化 w8a8c8 / w4a8c8 / mxfp8 / fp8-attention 等；平台 atlas-a3 / ascend910 等）
-- 进入新优化阶段、做方案分析、策略选择、debug 调试、性能/精度回归归因时
-
-涉及 subagent 时，必须将 llm-wiki-query skill 的使用说明注入到拉起 subagent 的 prompt 中。
-
-知识检索一律通过 MCP 工具：{{wiki_search_tool}}、{{wiki_get_page_tool}}。
-需要引用图片时，使用 wiki_get_page 返回 content 中的 /assets HTTP URL 或 assets manifest。
-
-每次使用 llm-wiki-query 后，必须把页面级记录写到当前阶段 progress.md 同级的 wiki_usage.md，并把查询摘要同步写入 progress.md。
-<!-- LLM-WIKI:END -->
-```
+- `{{instruction_file}}`
+- `{{mcp_server_name}}`
+- `{{mcp_url}}`
+- `{{query_skill_name}}`
+- `{{wiki_search_tool}}`
+- `{{wiki_get_page_tool}}`
 
 幂等规则：
 
@@ -168,9 +155,9 @@ mcp_mode=cloud-only-read
 mcp_url={{mcp_url}}
 mcp_probe=rpc_ok | tool_not_found_reload_required | failed | skipped_update_required
 pin_status=created | updated | already_current | broken
-claude_md=<absolute path>
+instruction_file=<absolute path>
 ```
 
-如果 `version_check=update_required`，`mcp_probe=skipped_update_required`，`pin_status` 不输出或输出 `skipped_update_required`，并且必须打印上面的更新命令。
+如果 `version_check=update_required`，`mcp_probe=skipped_update_required`，`pin_status` 不输出或输出 `skipped_update_required`，并且必须打印上面的更新说明。
 
-如果 `mcp_probe=tool_not_found_reload_required`，最后提示用户：在当前会话中运行 `/reload-plugins` 后重新 `/wiki-cloud-mount`。
+如果 `mcp_probe=tool_not_found_reload_required`，最后提示用户：重新加载当前平台 adapter 后重新运行挂载入口。

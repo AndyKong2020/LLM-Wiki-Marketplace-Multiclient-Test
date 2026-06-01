@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import re
 import unittest
 
 
@@ -28,6 +29,24 @@ class SourceLayoutTests(unittest.TestCase):
 
 
 class TemplateInventoryTests(unittest.TestCase):
+    def test_skill_templates_do_not_reference_legacy_query_skill(self):
+        for path in sorted((ROOT / "src/skills").glob("*/SKILL.md.tmpl")):
+            text = path.read_text(encoding="utf-8")
+            self.assertNotIn("llm-wiki-query", text, path.relative_to(ROOT))
+
+    def test_mount_template_uses_shared_pin_block_contract(self):
+        mount_text = (ROOT / "src/skills/llm-wiki-cloud-mount/SKILL.md.tmpl").read_text(encoding="utf-8")
+        pin_block_text = (ROOT / "src/shared/pin-block.md.tmpl").read_text(encoding="utf-8")
+        self.assertIn("src/shared/pin-block.md.tmpl", mount_text)
+        for slot in set(re.findall(r"{{[a-zA-Z0-9_]+}}", pin_block_text)):
+            with self.subTest(slot=slot):
+                self.assertIn(slot, mount_text)
+
+    def test_skill_templates_have_no_todo_markers(self):
+        for path in sorted((ROOT / "src/skills").glob("*/SKILL.md.tmpl")):
+            text = path.read_text(encoding="utf-8")
+            self.assertNotIn("TODO", text, path.relative_to(ROOT))
+
     def test_required_templates_exist(self):
         required = [
             "src/commands/wiki-cloud-mount.md.tmpl",
