@@ -1,0 +1,20 @@
+{
+  "name": "{{marketplace_name}}",
+  "interface": {
+    "displayName": "LLM Wiki Cloud"
+  },
+  "plugins": [
+    {
+      "name": "{{plugin_name}}",
+      "source": {
+        "source": "local",
+        "path": "./plugins/{{plugin_name}}"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

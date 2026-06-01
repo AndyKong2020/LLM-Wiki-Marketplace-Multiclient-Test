@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+prefix="${HOME}/.config/opencode"
+dry_run=0
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --prefix)
+      prefix="$2"
+      shift 2
+      ;;
+    --dry-run)
+      dry_run=1
+      shift
+      ;;
+    *)
+      echo "unknown argument: $1" >&2
+      exit 2
+      ;;
+  esac
+done
+
+script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+source_root="${script_dir}"
+
+if [ "$dry_run" = "1" ]; then
+  echo "install_prefix=${prefix}"
+  echo "source_root=${source_root}"
+  exit 0
+fi
+
+mkdir -p "${prefix}/commands" "${prefix}/skills"
+cp -R "${source_root}/.opencode/commands/." "${prefix}/commands/"
+cp -R "${source_root}/.opencode/skills/." "${prefix}/skills/"
+
+python3 - "$prefix" "${source_root}/opencode.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+prefix = Path(sys.argv[1])
+source_config = Path(sys.argv[2])
+target = prefix / "opencode.json"
+
+incoming = json.loads(source_config.read_text(encoding="utf-8"))
+if target.exists():
+    merged = json.loads(target.read_text(encoding="utf-8"))
+else:
+    merged = {"$schema": "https://opencode.ai/config.json"}
+
+merged.setdefault("mcp", {})
+merged["mcp"].update(incoming.get("mcp", {}))
+target.write_text(json.dumps(merged, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+echo "Installed llm-wiki-client OpenCode adapter into ${prefix}"

@@ -1,0 +1,10 @@
+---
+description: 为当前项目挂载云端 CANN-Infer-Wiki MCP（验证远程工具 + 写入 {{instruction_file}} pin block）
+allowed-tools: Bash Read Edit Write {{wiki_search_tool}}
+---
+
+使用 `llm-wiki-cloud-mount` skill 为当前项目执行 mount。
+
+不要解析命令参数。MCP 客户端配置由插件或平台 adapter 自带，URL 固定为云端 `{{mcp_url}}`；本 command 不 clone wiki 仓、不启动本机 server、不做端口探测。
+
+mount 的执行步骤、版本检查、远程 MCP probe、pin block 内容、结果汇报全部以 `llm-wiki-cloud-mount` skill 为准。
