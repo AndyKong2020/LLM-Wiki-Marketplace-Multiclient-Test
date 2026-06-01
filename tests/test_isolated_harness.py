@@ -189,6 +189,40 @@ class IsolatedHarnessTests(unittest.TestCase):
                 ),
             )
 
+    def test_shallow_active_runtime_prefix_is_learned_and_allows_later_sibling_subtree(self):
+        harness = load_harness()
+        with tempfile.TemporaryDirectory(prefix="isolated-harness-test-") as temp_dir:
+            root = Path(temp_dir)
+            codex_home = root / ".codex"
+            arg0 = codex_home / "tmp/arg0"
+            arg0.mkdir(parents=True)
+            harness.GLOBAL_PATHS = [codex_home]
+
+            first_before = harness.snapshot_global_configs()
+            (arg0 / "codex-arg0alpha").mkdir()
+            (arg0 / "codex-arg0alpha/.lock").write_text("lock\n", encoding="utf-8")
+            (arg0 / "codex-arg0alpha/apply_patch").write_text("tool\n", encoding="utf-8")
+            first_after = harness.snapshot_global_configs()
+
+            prefixes = harness.detect_volatile_prefixes([(first_before, first_after)])
+            self.assertIn("tmp/arg0", prefixes[str(codex_home)])
+
+            before = harness.snapshot_global_configs()
+            (arg0 / "codex-arg0beta").mkdir()
+            (arg0 / "codex-arg0beta/.lock").write_text("later\n", encoding="utf-8")
+            (arg0 / "codex-arg0beta/codex-execve-wrapper").write_text("later\n", encoding="utf-8")
+            after = harness.snapshot_global_configs()
+
+            self.assertEqual(
+                {},
+                harness.unexpected_global_config_changes(
+                    before,
+                    after,
+                    volatile_paths={},
+                    volatile_prefixes=prefixes,
+                ),
+            )
+
     def test_shallow_active_parent_prefix_is_not_learned_or_allowed(self):
         harness = load_harness()
         with tempfile.TemporaryDirectory(prefix="isolated-harness-test-") as temp_dir:
@@ -212,6 +246,9 @@ class IsolatedHarnessTests(unittest.TestCase):
                 [(first_before, first_after), (second_before, second_after)]
             )
             self.assertNotIn("sessions", prefixes.get(str(codex_home), set()))
+            self.assertFalse(
+                any(prefix.startswith("sessions/") for prefix in prefixes.get(str(codex_home), set()))
+            )
 
             before = harness.snapshot_global_configs()
             (sessions / "gamma").mkdir(parents=True)
@@ -243,6 +280,92 @@ class IsolatedHarnessTests(unittest.TestCase):
                 [(first_before, first_after), (second_before, second_after)]
             )
             self.assertNotIn("worktrees/dba4", prefixes.get(str(codex_home), set()))
+
+    def test_main_run_only_shallow_prefix_change_is_not_allowed_without_probe_evidence(self):
+        harness = load_harness()
+        with tempfile.TemporaryDirectory(prefix="isolated-harness-test-") as temp_dir:
+            root = Path(temp_dir)
+            codex_home = root / ".codex"
+            arg0 = codex_home / "tmp/arg0"
+            arg0.mkdir(parents=True)
+            harness.GLOBAL_PATHS = [codex_home]
+
+            before = harness.snapshot_global_configs()
+            (arg0 / "codex-arg0single").mkdir()
+            (arg0 / "codex-arg0single/.lock").write_text("one-off\n", encoding="utf-8")
+            (arg0 / "codex-arg0single/apply_patch").write_text("one-off\n", encoding="utf-8")
+            after = harness.snapshot_global_configs()
+
+            unexpected = harness.unexpected_global_config_changes(
+                before,
+                after,
+                volatile_paths={},
+                volatile_prefixes={},
+            )
+            self.assertIn(str(codex_home), unexpected)
+            self.assertIn("tmp/arg0/codex-arg0single", unexpected[str(codex_home)])
+
+    def test_post_probe_activity_can_confirm_main_run_shallow_prefix_changes(self):
+        harness = load_harness()
+        with tempfile.TemporaryDirectory(prefix="isolated-harness-test-") as temp_dir:
+            root = Path(temp_dir)
+            claude_home = root / ".claude"
+            ide = claude_home / "ide"
+            ide.mkdir(parents=True)
+            harness.GLOBAL_PATHS = [claude_home]
+
+            main_before = harness.snapshot_global_configs()
+            (ide / "111.lock").write_text("main\n", encoding="utf-8")
+            (ide / "222.lock").write_text("main\n", encoding="utf-8")
+            main_after = harness.snapshot_global_configs()
+
+            self.assertEqual(
+                {},
+                harness.confirmed_post_probe_prefixes((main_before, main_after), []),
+            )
+
+            post_before = main_after
+            (ide / "333.lock").write_text("post\n", encoding="utf-8")
+            post_after = harness.snapshot_global_configs()
+
+            confirmed = harness.confirmed_post_probe_prefixes(
+                (main_before, main_after),
+                [(post_before, post_after)],
+            )
+            self.assertEqual({str(claude_home): {"ide"}}, confirmed)
+
+            unexpected = harness.unexpected_global_config_changes(
+                main_before,
+                post_after,
+                volatile_paths={},
+                volatile_prefixes=confirmed,
+            )
+            self.assertEqual({}, unexpected)
+
+    def test_sqlite_wal_probe_marks_base_sqlite_as_exact_volatile(self):
+        harness = load_harness()
+        with tempfile.TemporaryDirectory(prefix="isolated-harness-test-") as temp_dir:
+            root = Path(temp_dir)
+            codex_home = root / ".codex"
+            codex_home.mkdir()
+            db = codex_home / "state_5.sqlite"
+            wal = codex_home / "state_5.sqlite-wal"
+            db.write_text("before\n", encoding="utf-8")
+            wal.write_text("before\n", encoding="utf-8")
+            harness.GLOBAL_PATHS = [codex_home]
+
+            probe_before = harness.snapshot_global_configs()
+            wal.write_text("probe\n", encoding="utf-8")
+            probe_after = harness.snapshot_global_configs()
+
+            volatile = harness.detect_volatile_paths(probe_before, probe_after)
+            self.assertEqual({str(codex_home): {"state_5.sqlite", "state_5.sqlite-wal"}}, volatile)
+
+            before = harness.snapshot_global_configs()
+            db.write_text("checkpoint\n", encoding="utf-8")
+            after = harness.snapshot_global_configs()
+
+            self.assertEqual({}, harness.unexpected_global_config_changes(before, after, volatile))
 
     def test_strict_global_digest_reports_dynamic_prefix_changes(self):
         harness = load_harness()
@@ -277,6 +400,31 @@ class IsolatedHarnessTests(unittest.TestCase):
                 "worktrees/dba4/Raw-Crawler/raw/gitcode/cann/ops-transformer/pulls/items/2001",
                 unexpected[str(codex_home)],
             )
+
+    def test_strict_global_digest_reports_learned_shallow_prefix_changes(self):
+        harness = load_harness()
+        with tempfile.TemporaryDirectory(prefix="isolated-harness-test-") as temp_dir:
+            root = Path(temp_dir)
+            codex_home = root / ".codex"
+            arg0 = codex_home / "tmp/arg0"
+            arg0.mkdir(parents=True)
+            harness.GLOBAL_PATHS = [codex_home]
+            prefixes = {str(codex_home): {"tmp/arg0"}}
+
+            before = harness.snapshot_global_configs()
+            (arg0 / "codex-arg0strict").mkdir()
+            (arg0 / "codex-arg0strict/.lock").write_text("strict\n", encoding="utf-8")
+            after = harness.snapshot_global_configs()
+
+            unexpected = harness.unexpected_global_config_changes(
+                before,
+                after,
+                volatile_paths={},
+                volatile_prefixes=prefixes,
+                strict_global_digest=True,
+            )
+            self.assertIn(str(codex_home), unexpected)
+            self.assertIn("tmp/arg0/codex-arg0strict", unexpected[str(codex_home)])
 
     def test_strict_global_digest_reports_volatile_changes(self):
         harness = load_harness()
