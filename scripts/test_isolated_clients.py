@@ -38,6 +38,10 @@ SnapshotEntry = tuple[str, ...]
 PathSnapshot = dict[str, SnapshotEntry]
 GlobalSnapshot = dict[str, PathSnapshot]
 VolatilePaths = dict[str, set[str]]
+VolatilePrefixes = dict[str, set[str]]
+SnapshotTransition = tuple[GlobalSnapshot, GlobalSnapshot]
+MIN_DYNAMIC_PREFIX_COMPONENTS = 4
+MAX_VOLATILE_MESSAGE_ITEMS = 20
 
 
 def _update_digest(digest: "hashlib._Hash", *parts: str) -> None:
@@ -308,26 +312,103 @@ def detect_volatile_paths(before: GlobalSnapshot, after: GlobalSnapshot) -> Vola
     return volatile
 
 
+def _path_components(rel: str) -> list[str]:
+    if rel in {"", "."}:
+        return []
+    return [part for part in rel.split("/") if part]
+
+
+def _join_components(parts: list[str]) -> str:
+    return "/".join(parts) if parts else "."
+
+
+def _is_narrow_dynamic_prefix(prefix: str) -> bool:
+    return len(_path_components(prefix)) >= MIN_DYNAMIC_PREFIX_COMPONENTS
+
+
+def _ancestor_paths(rel: str) -> set[str]:
+    parts = _path_components(rel)
+    return {_join_components(parts[:index]) for index in range(1, len(parts))}
+
+
+def _topmost_changed_entries(before: PathSnapshot, after: PathSnapshot) -> list[tuple[str, SnapshotEntry]]:
+    changed = changed_snapshot_entries(before, after)
+    changed_set = set(changed)
+    entries: list[tuple[str, SnapshotEntry]] = []
+    for rel in changed:
+        if rel == ".":
+            continue
+        if changed_set.intersection(_ancestor_paths(rel)):
+            continue
+        entry = after.get(rel) or before.get(rel)
+        if entry is not None:
+            entries.append((rel, entry))
+    return entries
+
+
+def detect_volatile_prefixes(transitions: list[SnapshotTransition]) -> VolatilePrefixes:
+    sample_indexes: dict[str, dict[str, set[int]]] = {}
+    direct_children: dict[str, dict[str, set[str]]] = {}
+
+    for sample_index, (before, after) in enumerate(transitions):
+        for root in sorted(set(before) | set(after)):
+            root_before = before.get(root, {})
+            root_after = after.get(root, {})
+            for rel, entry in _topmost_changed_entries(root_before, root_after):
+                if entry[0] != "dir":
+                    continue
+                parts = _path_components(rel)
+                if len(parts) < 2:
+                    continue
+                prefix = _join_components(parts[:-1])
+                if not _is_narrow_dynamic_prefix(prefix):
+                    continue
+                child = parts[-1]
+                sample_indexes.setdefault(root, {}).setdefault(prefix, set()).add(sample_index)
+                direct_children.setdefault(root, {}).setdefault(prefix, set()).add(child)
+
+    prefixes: VolatilePrefixes = {}
+    for root, root_prefixes in sample_indexes.items():
+        learned = {
+            prefix
+            for prefix, indexes in root_prefixes.items()
+            if len(indexes) >= 2 and len(direct_children.get(root, {}).get(prefix, set())) >= 2
+        }
+        if learned:
+            prefixes[root] = learned
+    return prefixes
+
+
 def _merge_volatile_paths(target: VolatilePaths, source: VolatilePaths) -> None:
     for root, paths in source.items():
         target.setdefault(root, set()).update(paths)
+
+
+def _change_is_allowed_by_prefix(rel: str, prefixes: set[str]) -> bool:
+    return any(rel.startswith(f"{prefix}/") for prefix in prefixes)
 
 
 def unexpected_global_config_changes(
     before: GlobalSnapshot,
     after: GlobalSnapshot,
     volatile_paths: VolatilePaths | None = None,
+    volatile_prefixes: VolatilePrefixes | None = None,
     *,
     strict_global_digest: bool = False,
 ) -> dict[str, list[str]]:
     changes = global_config_changes(before, after)
-    if strict_global_digest or not volatile_paths:
+    if strict_global_digest or (not volatile_paths and not volatile_prefixes):
         return changes
 
     unexpected: dict[str, list[str]] = {}
     for root, rels in changes.items():
         allowed = volatile_paths.get(root, set())
-        filtered = [rel for rel in rels if rel not in allowed]
+        prefixes = volatile_prefixes.get(root, set()) if volatile_prefixes else set()
+        filtered = [
+            rel
+            for rel in rels
+            if rel not in allowed and not _change_is_allowed_by_prefix(rel, prefixes)
+        ]
         if filtered:
             unexpected[root] = filtered
     return unexpected
@@ -358,22 +439,42 @@ def describe_digest_changes(before: dict[str, object], after: dict[str, object])
     return "; ".join(changed)
 
 
-def _format_volatile_paths(volatile_paths: VolatilePaths) -> str:
-    return "; ".join(
-        f"{root}: {', '.join(sorted(paths))}"
-        for root, paths in sorted(volatile_paths.items())
-    )
+def _format_paths_by_root(paths_by_root: dict[str, set[str]]) -> str:
+    formatted = []
+    for root, paths in sorted(paths_by_root.items()):
+        ordered = sorted(paths)
+        sample = ordered[:MAX_VOLATILE_MESSAGE_ITEMS]
+        suffix = "" if len(ordered) <= len(sample) else f", ... +{len(ordered) - len(sample)} more"
+        formatted.append(f"{root}: {', '.join(sample)}{suffix}")
+    return "; ".join(formatted)
 
 
-def probe_global_stability(delay_seconds: float = 0.25, samples: int = 4) -> tuple[GlobalSnapshot, VolatilePaths]:
+def _format_volatile_activity(
+    volatile_paths: VolatilePaths,
+    volatile_prefixes: VolatilePrefixes,
+) -> str:
+    parts = []
+    if volatile_paths:
+        parts.append(f"exact paths: {_format_paths_by_root(volatile_paths)}")
+    if volatile_prefixes:
+        parts.append(f"learned prefixes: {_format_paths_by_root(volatile_prefixes)}")
+    return "; ".join(parts)
+
+
+def probe_global_stability(
+    delay_seconds: float = 0.25,
+    samples: int = 4,
+) -> tuple[GlobalSnapshot, VolatilePaths, VolatilePrefixes]:
     previous = snapshot_global_configs()
     volatile: VolatilePaths = {}
+    transitions: list[SnapshotTransition] = []
     for _ in range(max(samples, 2) - 1):
         time.sleep(delay_seconds)
         current = snapshot_global_configs()
+        transitions.append((previous, current))
         _merge_volatile_paths(volatile, detect_volatile_paths(previous, current))
         previous = current
-    return previous, volatile
+    return previous, volatile, detect_volatile_prefixes(transitions)
 
 
 def parse_args() -> argparse.Namespace:
@@ -389,19 +490,19 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    before, volatile_paths = probe_global_stability()
-    if volatile_paths:
-        volatile_message = _format_volatile_paths(volatile_paths)
+    before, volatile_paths, volatile_prefixes = probe_global_stability()
+    if volatile_paths or volatile_prefixes:
+        volatile_message = _format_volatile_activity(volatile_paths, volatile_prefixes)
         if args.strict_global_digest:
             print(
                 "warning: external global config activity observed during probe; "
-                f"strict mode will not ignore it: {volatile_message}",
+                f"strict mode will not ignore exact paths or learned prefixes: {volatile_message}",
                 file=sys.stderr,
             )
         else:
             print(
                 "warning: external global config activity observed during probe; "
-                f"ignoring these paths for this run: {volatile_message}",
+                f"ignoring exact paths and learned prefixes for this run: {volatile_message}",
                 file=sys.stderr,
             )
     server, upload_url = start_mock_server()
@@ -424,6 +525,7 @@ def main() -> int:
             before,
             after,
             volatile_paths,
+            volatile_prefixes,
             strict_global_digest=args.strict_global_digest,
         )
         if unexpected_changes:

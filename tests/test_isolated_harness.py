@@ -125,6 +125,159 @@ class IsolatedHarnessTests(unittest.TestCase):
             self.assertIn(str(codex_home), unexpected)
             self.assertIn("sessions/real-cli-pollution", unexpected[str(codex_home)])
 
+    def test_codex_sessions_sibling_file_is_unexpected_with_exact_volatile_path(self):
+        harness = load_harness()
+        with tempfile.TemporaryDirectory(prefix="isolated-harness-test-") as temp_dir:
+            root = Path(temp_dir)
+            codex_home = root / ".codex"
+            sessions = codex_home / "sessions"
+            sessions.mkdir(parents=True)
+            harness.GLOBAL_PATHS = [codex_home]
+
+            before = harness.snapshot_global_configs()
+            (sessions / "real-cli-pollution").write_text("unexpected\n", encoding="utf-8")
+            after = harness.snapshot_global_configs()
+
+            unexpected = harness.unexpected_global_config_changes(
+                before,
+                after,
+                {str(codex_home): {"sessions/current.jsonl"}},
+            )
+            self.assertIn(str(codex_home), unexpected)
+            self.assertIn("sessions/real-cli-pollution", unexpected[str(codex_home)])
+
+    def test_deep_active_parent_prefix_is_learned_and_allows_later_sibling_subtree(self):
+        harness = load_harness()
+        with tempfile.TemporaryDirectory(prefix="isolated-harness-test-") as temp_dir:
+            root = Path(temp_dir)
+            codex_home = root / ".codex"
+            items = (
+                codex_home
+                / "worktrees/dba4/Raw-Crawler/raw/gitcode/cann/ops-transformer/pulls/items"
+            )
+            items.mkdir(parents=True)
+            harness.GLOBAL_PATHS = [codex_home]
+
+            first_before = harness.snapshot_global_configs()
+            (items / "1001/pull").mkdir(parents=True)
+            (items / "1001/pull/body.json").write_text("one\n", encoding="utf-8")
+            first_after = harness.snapshot_global_configs()
+
+            second_before = first_after
+            (items / "1002/pull").mkdir(parents=True)
+            (items / "1002/pull/body.json").write_text("two\n", encoding="utf-8")
+            second_after = harness.snapshot_global_configs()
+
+            prefixes = harness.detect_volatile_prefixes(
+                [(first_before, first_after), (second_before, second_after)]
+            )
+            learned = "worktrees/dba4/Raw-Crawler/raw/gitcode/cann/ops-transformer/pulls/items"
+            self.assertIn(learned, prefixes[str(codex_home)])
+
+            before = harness.snapshot_global_configs()
+            (items / "9999/comments/page-000001").mkdir(parents=True)
+            (items / "9999/comments/page-000001/body.json").write_text("later\n", encoding="utf-8")
+            after = harness.snapshot_global_configs()
+
+            self.assertEqual(
+                {},
+                harness.unexpected_global_config_changes(
+                    before,
+                    after,
+                    volatile_paths={},
+                    volatile_prefixes=prefixes,
+                ),
+            )
+
+    def test_shallow_active_parent_prefix_is_not_learned_or_allowed(self):
+        harness = load_harness()
+        with tempfile.TemporaryDirectory(prefix="isolated-harness-test-") as temp_dir:
+            root = Path(temp_dir)
+            codex_home = root / ".codex"
+            sessions = codex_home / "sessions"
+            sessions.mkdir(parents=True)
+            harness.GLOBAL_PATHS = [codex_home]
+
+            first_before = harness.snapshot_global_configs()
+            (sessions / "alpha").mkdir()
+            (sessions / "alpha/log.jsonl").write_text("one\n", encoding="utf-8")
+            first_after = harness.snapshot_global_configs()
+
+            second_before = first_after
+            (sessions / "beta").mkdir(parents=True)
+            (sessions / "beta/log.jsonl").write_text("two\n", encoding="utf-8")
+            second_after = harness.snapshot_global_configs()
+
+            prefixes = harness.detect_volatile_prefixes(
+                [(first_before, first_after), (second_before, second_after)]
+            )
+            self.assertNotIn("sessions", prefixes.get(str(codex_home), set()))
+
+            before = harness.snapshot_global_configs()
+            (sessions / "gamma").mkdir(parents=True)
+            (sessions / "gamma/log.jsonl").write_text("later\n", encoding="utf-8")
+            after = harness.snapshot_global_configs()
+
+            unexpected = harness.unexpected_global_config_changes(
+                before,
+                after,
+                volatile_paths={},
+                volatile_prefixes=prefixes,
+            )
+            self.assertIn(str(codex_home), unexpected)
+            self.assertIn("sessions/gamma", unexpected[str(codex_home)])
+
+            shallow_parent = codex_home / "worktrees/dba4"
+            shallow_parent.mkdir(parents=True)
+            first_before = harness.snapshot_global_configs()
+            (shallow_parent / "alpha").mkdir()
+            (shallow_parent / "alpha/state.json").write_text("one\n", encoding="utf-8")
+            first_after = harness.snapshot_global_configs()
+
+            second_before = first_after
+            (shallow_parent / "beta").mkdir()
+            (shallow_parent / "beta/state.json").write_text("two\n", encoding="utf-8")
+            second_after = harness.snapshot_global_configs()
+
+            prefixes = harness.detect_volatile_prefixes(
+                [(first_before, first_after), (second_before, second_after)]
+            )
+            self.assertNotIn("worktrees/dba4", prefixes.get(str(codex_home), set()))
+
+    def test_strict_global_digest_reports_dynamic_prefix_changes(self):
+        harness = load_harness()
+        with tempfile.TemporaryDirectory(prefix="isolated-harness-test-") as temp_dir:
+            root = Path(temp_dir)
+            codex_home = root / ".codex"
+            items = (
+                codex_home
+                / "worktrees/dba4/Raw-Crawler/raw/gitcode/cann/ops-transformer/pulls/items"
+            )
+            harness.GLOBAL_PATHS = [codex_home]
+            prefixes = {
+                str(codex_home): {
+                    "worktrees/dba4/Raw-Crawler/raw/gitcode/cann/ops-transformer/pulls/items"
+                }
+            }
+
+            before = harness.snapshot_global_configs()
+            (items / "2001/pull").mkdir(parents=True)
+            (items / "2001/pull/body.json").write_text("strict\n", encoding="utf-8")
+            after = harness.snapshot_global_configs()
+
+            unexpected = harness.unexpected_global_config_changes(
+                before,
+                after,
+                volatile_paths={},
+                volatile_prefixes=prefixes,
+                strict_global_digest=True,
+            )
+            self.assertIn(str(codex_home), unexpected)
+            self.assertIn(
+                "worktrees/dba4/Raw-Crawler/raw/gitcode/cann/ops-transformer/pulls/items/2001",
+                unexpected[str(codex_home)],
+            )
+
     def test_strict_global_digest_reports_volatile_changes(self):
         harness = load_harness()
         with tempfile.TemporaryDirectory(prefix="isolated-harness-test-") as temp_dir:
@@ -188,6 +341,12 @@ class IsolatedHarnessTests(unittest.TestCase):
         finally:
             server.shutdown()
             server.server_close()
+
+    def test_loading_harness_does_not_leave_pycache(self):
+        cleanup_pycache()
+        load_harness()
+        self.assertFalse((ROOT / "scripts/__pycache__").exists())
+        self.assertFalse((ROOT / "tests/__pycache__").exists())
 
 
 def tearDownModule() -> None:
