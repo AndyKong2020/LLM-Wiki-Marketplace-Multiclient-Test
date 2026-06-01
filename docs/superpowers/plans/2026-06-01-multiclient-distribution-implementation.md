@@ -731,7 +731,7 @@ class ValidateReleaseTests(unittest.TestCase):
 
     def test_token_scan_rejects_realistic_secret(self):
         bad = ROOT / ".llm-wiki-test-secret.txt"
-        bad.write_text("LLM_WIKI_UPLOAD_TOKEN=llmw_real_secret_value_123456\n", encoding="utf-8")
+        bad.write_text("LLM_WIKI_UPLOAD_TOKEN=" "llmw_" "real_secret_value_123456\n", encoding="utf-8")
         try:
             result = subprocess.run(["python3", "scripts/validate_release.py"], cwd=ROOT, text=True, capture_output=True)
             self.assertNotEqual(result.returncode, 0)
