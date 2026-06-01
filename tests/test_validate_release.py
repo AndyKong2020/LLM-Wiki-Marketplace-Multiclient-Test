@@ -80,7 +80,7 @@ class ValidateReleaseTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("token-like string", result.stdout + result.stderr)
 
-    def test_validate_release_rejects_stale_generated_files(self):
+    def test_validate_release_rejects_manual_generated_file_edit(self):
         with temp_repo() as repo:
             run_sync(repo)
             generated = repo / "plugins/llm-wiki-client/skills/llm-wiki-cloud-query/SKILL.md"
@@ -88,7 +88,9 @@ class ValidateReleaseTests(unittest.TestCase):
             generated.write_text(original + "\n<!-- stale generated validator probe -->\n", encoding="utf-8")
             result = run_validate(repo)
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("generated files are stale", result.stdout + result.stderr)
+            output = result.stdout + result.stderr
+            self.assertIn("generated files are stale", output)
+            self.assertIn("modified generated outputs", output)
 
     def test_validate_release_checks_codex_manifest_skill_root(self):
         with temp_repo() as repo:
@@ -116,21 +118,20 @@ class ValidateReleaseTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("README install command", result.stdout + result.stderr)
 
-    def test_validate_release_does_not_overwrite_dirty_generated_file(self):
+    def test_validate_release_allows_synced_generated_changes(self):
         with temp_repo() as repo:
+            template = repo / "src/skills/llm-wiki-cloud-query/SKILL.md.tmpl"
+            original = template.read_text(encoding="utf-8")
+            template.write_text(
+                original + "\nSynced generated validator probe.\n",
+                encoding="utf-8",
+            )
             run_sync(repo)
-            generated = repo / "plugins/llm-wiki-client/skills/llm-wiki-cloud-query/SKILL.md"
-            original = generated.read_text(encoding="utf-8")
-            dirty_text = original + "\n<!-- local generated edit that must survive validation -->\n"
-            generated.write_text(dirty_text, encoding="utf-8")
 
             result = run_validate(repo)
 
-            self.assertNotEqual(result.returncode, 0)
-            output = result.stdout + result.stderr
-            self.assertIn("generated files are stale", output)
-            self.assertIn("dirty", output)
-            self.assertEqual(generated.read_text(encoding="utf-8"), dirty_text)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("validate_release=ok", result.stdout)
 
     def test_validate_release_rejects_new_generated_outputs(self):
         with temp_repo() as repo:
@@ -159,6 +160,11 @@ class ValidateReleaseTests(unittest.TestCase):
             self.assertIn("generated files are stale", output)
             self.assertIn("untracked", output)
 
+            run_sync(repo)
+            synced_result = run_validate(repo)
+            self.assertEqual(synced_result.returncode, 0, synced_result.stdout + synced_result.stderr)
+            self.assertIn("validate_release=ok", synced_result.stdout)
+
 
 class DocumentationTests(unittest.TestCase):
     def test_readme_mentions_all_clients_and_install_commands(self):
@@ -181,6 +187,8 @@ class DocumentationTests(unittest.TestCase):
     def test_plugin_readme_mentions_generated_adapters(self):
         text = (ROOT / "plugins/llm-wiki-client/README.md").read_text(encoding="utf-8")
         for phrase in [
+            "/llm-wiki-client:wiki-cloud-mount",
+            "/llm-wiki-client:wiki-cloud-backflow",
             "scripts/sync_adapters.py",
             "python3 scripts/validate_release.py",
             ".claude-plugin/plugin.json",
@@ -190,6 +198,10 @@ class DocumentationTests(unittest.TestCase):
             "dist/opencode",
             "src/",
             "platforms/",
+            "本 README 是维护文档",
+            "不要手工编辑 generated adapter",
+            "root README",
+            "tests",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, text)

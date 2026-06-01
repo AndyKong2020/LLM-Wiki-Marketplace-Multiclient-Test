@@ -351,21 +351,6 @@ def summarize_items(items: list[str], *, limit: int = 8) -> str:
     return summary
 
 
-def git_status_generated_paths() -> list[str]:
-    result = subprocess.run(
-        ["git", "status", "--porcelain", "--untracked-files=all", "--", *GENERATED_DIFF_PATHS],
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
-    )
-    if result.returncode != 0:
-        detail = (result.stderr or result.stdout).strip()
-        if detail:
-            fail(f"git status failed during generated check: {detail}")
-        fail(f"git status failed during generated check with exit code {result.returncode}")
-    return [line for line in result.stdout.splitlines() if line.strip()]
-
-
 def run_sync_adapters(root: Path) -> None:
     result = subprocess.run(
         [sys.executable, "scripts/sync_adapters.py"],
@@ -423,21 +408,15 @@ def describe_generated_snapshot_changes(before: GeneratedSnapshot, after: Genera
 
 
 def check_generated_files_current() -> None:
-    dirty_generated_paths = git_status_generated_paths()
-    if dirty_generated_paths:
-        fail(
-            "generated files are stale: dirty generated paths before sync: "
-            f"{summarize_items(dirty_generated_paths)}"
-        )
+    current_snapshot = snapshot_generated_paths(ROOT)
 
     with tempfile.TemporaryDirectory(prefix="validate-release-") as temp_dir:
         temp_root = Path(temp_dir) / "repo"
         shutil.copytree(ROOT, temp_root, ignore=TEMP_COPY_IGNORE)
-        before_sync = snapshot_generated_paths(temp_root)
         run_sync_adapters(temp_root)
-        after_sync = snapshot_generated_paths(temp_root)
+        expected_snapshot = snapshot_generated_paths(temp_root)
 
-    changes = describe_generated_snapshot_changes(before_sync, after_sync)
+    changes = describe_generated_snapshot_changes(current_snapshot, expected_snapshot)
     if changes:
         fail(f"generated files are stale: {'; '.join(changes)}")
 

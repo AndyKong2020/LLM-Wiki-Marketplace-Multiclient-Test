@@ -118,6 +118,9 @@ python3 scripts/sync_adapters.py
 python3 scripts/validate_release.py
 ```
 
+`validate_release.py` 会在临时副本中重新运行 sync，并确认当前 generated outputs 与模板
+生成结果一致；因此同步后的 generated 产物即使尚未提交也可以通过，手工改动或漏生成仍会失败。
+
 ## 目录结构
 
 ```text
