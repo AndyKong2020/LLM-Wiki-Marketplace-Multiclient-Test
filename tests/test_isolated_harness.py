@@ -45,6 +45,20 @@ class IsolatedHarnessTests(unittest.TestCase):
 
             self.assertEqual(first_tree_digest, harness.tree_digest(tree))
 
+    def test_snapshot_global_configs_covers_codex_sessions(self):
+        harness = load_harness()
+        with tempfile.TemporaryDirectory(prefix="isolated-harness-test-") as temp_dir:
+            root = Path(temp_dir)
+            codex_home = root / ".codex"
+            sessions = codex_home / "sessions"
+            sessions.mkdir(parents=True)
+            harness.GLOBAL_PATHS = [codex_home]
+
+            before = harness.snapshot_global_configs()
+            (sessions / "x").write_text("session\n", encoding="utf-8")
+
+            self.assertNotEqual(before, harness.snapshot_global_configs())
+
     def test_isolated_env_redirects_all_client_config_paths(self):
         harness = load_harness()
         with tempfile.TemporaryDirectory(prefix="isolated-harness-test-") as temp_dir:

@@ -14,7 +14,6 @@ import tempfile
 import threading
 import urllib.request
 from pathlib import Path
-from typing import Callable
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,40 +27,6 @@ GLOBAL_PATHS = [
     Path.home() / ".agents",
     Path.home() / ".config/opencode",
 ]
-CLAUDE_VOLATILE_TOP_LEVEL = {
-    ".DS_Store",
-    ".last-cleanup",
-    ".last-update-result.json",
-    "backups",
-    "cache",
-    "debug",
-    "file-history",
-    "history.jsonl",
-    "ide",
-    "llm-wiki",
-    "projects",
-    "sessions",
-}
-CODEX_VOLATILE_TOP_LEVEL = {
-    ".DS_Store",
-    ".codex-global-state.json",
-    ".codex-global-state.json.bak",
-    ".tmp",
-    "cache",
-    "models_cache.json",
-    "process_manager",
-    "session_index.jsonl",
-    "sessions",
-    "shell_snapshots",
-    "tmp",
-    "worktrees",
-}
-CODEX_VOLATILE_PREFIXES = (
-    "goals_",
-    "logs_",
-    "memories_",
-    "state_",
-)
 
 
 class HarnessError(RuntimeError):
@@ -74,18 +39,7 @@ def _update_digest(digest: "hashlib._Hash", *parts: str) -> None:
         digest.update(b"\0")
 
 
-SkipDigestPath = Callable[[Path, str], bool]
-
-
-def _digest_entry(
-    digest: "hashlib._Hash",
-    path: Path,
-    rel: str,
-    should_skip: SkipDigestPath | None,
-) -> None:
-    if should_skip is not None and should_skip(path, rel):
-        return
-
+def _digest_entry(digest: "hashlib._Hash", path: Path, rel: str) -> None:
     try:
         metadata = path.lstat()
     except FileNotFoundError:
@@ -113,7 +67,7 @@ def _digest_entry(
             return
         for child in children:
             child_rel = child.name if rel in {"", "."} else f"{rel}/{child.name}"
-            _digest_entry(digest, child, child_rel, should_skip)
+            _digest_entry(digest, child, child_rel)
         return
 
     if stat.S_ISREG(mode):
@@ -129,14 +83,14 @@ def _digest_entry(
     _update_digest(digest, rel, "special", oct(mode & 0o170000))
 
 
-def tree_digest(path: Path, should_skip: SkipDigestPath | None = None) -> str:
+def tree_digest(path: Path) -> str:
     try:
         path.lstat()
     except FileNotFoundError:
         return "missing"
 
     digest = hashlib.sha256()
-    _digest_entry(digest, path, ".", should_skip)
+    _digest_entry(digest, path, ".")
     return digest.hexdigest()
 
 
@@ -305,35 +259,7 @@ def check_cli_visibility(env: dict[str, str]) -> None:
 
 
 def snapshot_global_configs() -> dict[str, str]:
-    return {str(path): tree_digest(path, should_skip_global_digest_path) for path in GLOBAL_PATHS}
-
-
-def should_skip_global_digest_path(path: Path, rel: str) -> bool:
-    rel = rel.removeprefix("./")
-    if rel == ".":
-        return False
-
-    root_name = path.anchor
-    for parent in path.parents:
-        if parent in GLOBAL_PATHS:
-            root_name = parent.name
-            break
-
-    first = rel.split("/", 1)[0]
-    if root_name == ".claude":
-        if first in CLAUDE_VOLATILE_TOP_LEVEL:
-            return True
-        parts = rel.split("/")
-        return any(part.endswith("-cache") for part in parts)
-
-    if root_name == ".codex":
-        if first in CODEX_VOLATILE_TOP_LEVEL:
-            return True
-        if rel.startswith("plugins/cache/"):
-            return True
-        return first.startswith(CODEX_VOLATILE_PREFIXES)
-
-    return False
+    return {str(path): tree_digest(path) for path in GLOBAL_PATHS}
 
 
 def describe_digest_changes(before: dict[str, str], after: dict[str, str]) -> str:
