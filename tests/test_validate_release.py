@@ -160,5 +160,40 @@ class ValidateReleaseTests(unittest.TestCase):
             self.assertIn("untracked", output)
 
 
+class DocumentationTests(unittest.TestCase):
+    def test_readme_mentions_all_clients_and_install_commands(self):
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        for phrase in [
+            "Claude Code",
+            "Codex",
+            "OpenCode",
+            "multiclient-test",
+            "/plugin install llm-wiki-client@llm-wiki-cloud",
+            "codex plugin add llm-wiki-client@llm-wiki-cloud",
+            "install-opencode.sh",
+            "/llm-wiki-client:wiki-cloud-mount",
+            "/llm-wiki-client:wiki-cloud-backflow",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text)
+        self.assertNotIn("/llm-wiki-client:llm-wiki-cloud-mount", text)
+
+    def test_plugin_readme_mentions_generated_adapters(self):
+        text = (ROOT / "plugins/llm-wiki-client/README.md").read_text(encoding="utf-8")
+        for phrase in [
+            "scripts/sync_adapters.py",
+            "python3 scripts/validate_release.py",
+            ".claude-plugin/plugin.json",
+            ".codex-plugin/plugin.json",
+            ".mcp.json",
+            "codex/skills",
+            "dist/opencode",
+            "src/",
+            "platforms/",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text)
+
+
 if __name__ == "__main__":
     unittest.main()
