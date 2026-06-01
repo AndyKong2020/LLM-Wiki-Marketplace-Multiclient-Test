@@ -1,7 +1,7 @@
 ---
 name: llm-wiki-cloud-mount
-description: 为当前项目挂载云端 CANN-Infer-Wiki（NPU 大模型推理优化知识库）。验证插件自带的远程 MCP 可用，并在项目 CLAUDE.md 写入 LLM-WIKI pin block。
-allowed-tools: Bash Read Edit Write mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_search
+description: 为当前项目挂载云端 CANN-Infer-Wiki（NPU 大模型推理优化知识库）。验证插件自带的远程 MCP 可用，并在项目 AGENTS.md 写入 LLM-WIKI pin block。
+allowed-tools: Bash Read Edit Write cann-infer-wiki-cloud wiki_search
 version: 1.1.6
 ---
 
@@ -34,7 +34,7 @@ mode:       cloud-only read
     +--> STEP 2: 远程 MCP probe
     |       调用 wiki_search(query="mount probe", limit=1)
     |
-    +--> STEP 3: 写入 CLAUDE.md pin block
+    +--> STEP 3: 写入 AGENTS.md pin block
     |
     +--> STEP 4: 汇报 mount 状态
 ```
@@ -92,7 +92,7 @@ PY
 |---|---|
 | `version_check=ok` | 继续 STEP 2 |
 | `version_check=unknown` | 汇报检查失败原因，但继续 STEP 2；不要因为网络或 GitHub raw 临时失败阻断 mount |
-| `version_check=update_required` | 停止 mount；不要 MCP probe；不要写 `CLAUDE.md` |
+| `version_check=update_required` | 停止 mount；不要 MCP probe；不要写 `AGENTS.md` |
 
 当 `version_check=update_required` 时，必须明确提示用户先更新：
 
@@ -111,7 +111,7 @@ plugin_version_latest=<latest>
 先确认 MCP tools 在本次会话可见、可用。直接调用：
 
 ```text
-mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_search(query="mount probe", limit=1)
+cann-infer-wiki-cloud wiki_search(query="mount probe", limit=1)
 ```
 
 处理规则：
@@ -125,20 +125,20 @@ mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_search(query="mount prob
 
 不要伪造 probe 成功；不要尝试本地启动 server 兜底。
 
-## 4. STEP 3：写入 CLAUDE.md Pin Block
+## 4. STEP 3：写入 AGENTS.md Pin Block
 
-目标文件优先为当前项目根目录 `CLAUDE.md`。如果不存在则创建。
+目标文件优先为当前项目根目录 `AGENTS.md`。如果不存在则创建。
 
 写入由 `src/shared/pin-block.md.tmpl` 渲染得到的 block。
 
 共享 pin block 必须使用这些 slot：
 
-- `CLAUDE.md`
+- `AGENTS.md`
 - `cann-infer-wiki-cloud`
 - `https://wiki.andykong.top/mcp`
 - `llm-wiki-cloud-query`
-- `mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_search`
-- `mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_get_page`
+- `cann-infer-wiki-cloud wiki_search`
+- `cann-infer-wiki-cloud wiki_get_page`
 
 幂等规则：
 
