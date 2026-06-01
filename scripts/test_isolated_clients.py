@@ -37,7 +37,7 @@ class HarnessError(RuntimeError):
 SnapshotEntry = tuple[str, ...]
 PathSnapshot = dict[str, SnapshotEntry]
 GlobalSnapshot = dict[str, PathSnapshot]
-VolatileTopLevels = dict[str, set[str]]
+VolatilePaths = dict[str, set[str]]
 
 
 def _update_digest(digest: "hashlib._Hash", *parts: str) -> None:
@@ -203,6 +203,7 @@ def isolated_env(root: Path, upload_url: str) -> dict[str, str]:
             "OPENCODE_CONFIG_DIR": str(root / "opencode"),
             "LLM_WIKI_UPLOAD_TOKEN": TEST_UPLOAD_TOKEN,
             "LLM_WIKI_UPLOAD_URL": upload_url,
+            "PYTHONDONTWRITEBYTECODE": "1",
         }
     )
     _mkdir_env_paths(
@@ -224,8 +225,8 @@ def isolated_env(root: Path, upload_url: str) -> dict[str, str]:
 
 
 def check_static(env: dict[str, str]) -> None:
-    run([sys.executable, "scripts/validate_release.py"], env=env)
-    run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"], env=env)
+    run([sys.executable, "-B", "scripts/validate_release.py"], env=env)
+    run([sys.executable, "-B", "-m", "unittest", "discover", "-s", "tests", "-v"], env=env)
 
 
 def check_mock_upload(upload_url: str) -> None:
@@ -300,39 +301,33 @@ def global_config_changes(before: GlobalSnapshot, after: GlobalSnapshot) -> dict
     return changes
 
 
-def _top_level(rel: str) -> str:
-    if rel in {"", "."}:
-        return "."
-    return rel.split("/", 1)[0]
-
-
-def detect_volatile_top_levels(before: GlobalSnapshot, after: GlobalSnapshot) -> VolatileTopLevels:
-    volatile: VolatileTopLevels = {}
+def detect_volatile_paths(before: GlobalSnapshot, after: GlobalSnapshot) -> VolatilePaths:
+    volatile: VolatilePaths = {}
     for root, rels in global_config_changes(before, after).items():
-        volatile[root] = {_top_level(rel) for rel in rels}
+        volatile[root] = set(rels)
     return volatile
 
 
-def _merge_volatile_top_levels(target: VolatileTopLevels, source: VolatileTopLevels) -> None:
-    for root, top_levels in source.items():
-        target.setdefault(root, set()).update(top_levels)
+def _merge_volatile_paths(target: VolatilePaths, source: VolatilePaths) -> None:
+    for root, paths in source.items():
+        target.setdefault(root, set()).update(paths)
 
 
 def unexpected_global_config_changes(
     before: GlobalSnapshot,
     after: GlobalSnapshot,
-    volatile_top_levels: VolatileTopLevels | None = None,
+    volatile_paths: VolatilePaths | None = None,
     *,
     strict_global_digest: bool = False,
 ) -> dict[str, list[str]]:
     changes = global_config_changes(before, after)
-    if strict_global_digest or not volatile_top_levels:
+    if strict_global_digest or not volatile_paths:
         return changes
 
     unexpected: dict[str, list[str]] = {}
     for root, rels in changes.items():
-        allowed = volatile_top_levels.get(root, set())
-        filtered = [rel for rel in rels if _top_level(rel) not in allowed]
+        allowed = volatile_paths.get(root, set())
+        filtered = [rel for rel in rels if rel not in allowed]
         if filtered:
             unexpected[root] = filtered
     return unexpected
@@ -363,20 +358,20 @@ def describe_digest_changes(before: dict[str, object], after: dict[str, object])
     return "; ".join(changed)
 
 
-def _format_volatile_top_levels(volatile_top_levels: VolatileTopLevels) -> str:
+def _format_volatile_paths(volatile_paths: VolatilePaths) -> str:
     return "; ".join(
-        f"{root}: {', '.join(sorted(top_levels))}"
-        for root, top_levels in sorted(volatile_top_levels.items())
+        f"{root}: {', '.join(sorted(paths))}"
+        for root, paths in sorted(volatile_paths.items())
     )
 
 
-def probe_global_stability(delay_seconds: float = 0.25, samples: int = 4) -> tuple[GlobalSnapshot, VolatileTopLevels]:
+def probe_global_stability(delay_seconds: float = 0.25, samples: int = 4) -> tuple[GlobalSnapshot, VolatilePaths]:
     previous = snapshot_global_configs()
-    volatile: VolatileTopLevels = {}
+    volatile: VolatilePaths = {}
     for _ in range(max(samples, 2) - 1):
         time.sleep(delay_seconds)
         current = snapshot_global_configs()
-        _merge_volatile_top_levels(volatile, detect_volatile_top_levels(previous, current))
+        _merge_volatile_paths(volatile, detect_volatile_paths(previous, current))
         previous = current
     return previous, volatile
 
@@ -387,16 +382,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--strict-global-digest",
         action="store_true",
-        help="fail on any global config change, including top-levels seen changing during the probe",
+        help="fail on any global config change, including paths seen changing during the probe",
     )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    before, volatile_top_levels = probe_global_stability()
-    if volatile_top_levels:
-        volatile_message = _format_volatile_top_levels(volatile_top_levels)
+    before, volatile_paths = probe_global_stability()
+    if volatile_paths:
+        volatile_message = _format_volatile_paths(volatile_paths)
         if args.strict_global_digest:
             print(
                 "warning: external global config activity observed during probe; "
@@ -406,7 +401,7 @@ def main() -> int:
         else:
             print(
                 "warning: external global config activity observed during probe; "
-                f"ignoring these top-levels for this run: {volatile_message}",
+                f"ignoring these paths for this run: {volatile_message}",
                 file=sys.stderr,
             )
     server, upload_url = start_mock_server()
@@ -428,7 +423,7 @@ def main() -> int:
         unexpected_changes = unexpected_global_config_changes(
             before,
             after,
-            volatile_top_levels,
+            volatile_paths,
             strict_global_digest=args.strict_global_digest,
         )
         if unexpected_changes:

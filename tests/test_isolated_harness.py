@@ -2,17 +2,29 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
+import sys
 import tempfile
 import unittest
 import urllib.request
 from pathlib import Path
 
+sys.dont_write_bytecode = True
 
 ROOT = Path(__file__).resolve().parents[1]
 HARNESS = ROOT / "scripts/test_isolated_clients.py"
 
 
+def cleanup_pycache() -> None:
+    shutil.rmtree(ROOT / "scripts/__pycache__", ignore_errors=True)
+    shutil.rmtree(ROOT / "tests/__pycache__", ignore_errors=True)
+
+
+cleanup_pycache()
+
+
 def load_harness():
+    sys.dont_write_bytecode = True
     spec = importlib.util.spec_from_file_location("isolated_clients_harness", HARNESS)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -78,12 +90,12 @@ class IsolatedHarnessTests(unittest.TestCase):
             unexpected = harness.unexpected_global_config_changes(
                 before,
                 after,
-                {str(codex_home): {"sessions"}},
+                {str(codex_home): {"sessions/current.jsonl"}},
             )
             self.assertIn(str(codex_home), unexpected)
             self.assertIn("plugins/probe", unexpected[str(codex_home)])
 
-    def test_volatile_codex_sessions_change_is_allowed(self):
+    def test_probe_volatility_allows_only_exact_changed_paths(self):
         harness = load_harness()
         with tempfile.TemporaryDirectory(prefix="isolated-harness-test-") as temp_dir:
             root = Path(temp_dir)
@@ -93,16 +105,25 @@ class IsolatedHarnessTests(unittest.TestCase):
             harness.GLOBAL_PATHS = [codex_home]
 
             probe_before = harness.snapshot_global_configs()
-            (sessions / "during-probe").write_text("external\n", encoding="utf-8")
+            current_session = sessions / "current.jsonl"
+            current_session.write_text("external\n", encoding="utf-8")
             probe_after = harness.snapshot_global_configs()
-            volatile = harness.detect_volatile_top_levels(probe_before, probe_after)
+            volatile = harness.detect_volatile_paths(probe_before, probe_after)
 
             before = harness.snapshot_global_configs()
-            (sessions / "after-probe").write_text("external later\n", encoding="utf-8")
+            current_session.write_text("external later\n", encoding="utf-8")
             after = harness.snapshot_global_configs()
 
-            self.assertEqual({str(codex_home): {"sessions"}}, volatile)
+            self.assertEqual({str(codex_home): {"sessions/current.jsonl"}}, volatile)
             self.assertEqual({}, harness.unexpected_global_config_changes(before, after, volatile))
+
+            before = harness.snapshot_global_configs()
+            (sessions / "real-cli-pollution").write_text("unexpected\n", encoding="utf-8")
+            after = harness.snapshot_global_configs()
+
+            unexpected = harness.unexpected_global_config_changes(before, after, volatile)
+            self.assertIn(str(codex_home), unexpected)
+            self.assertIn("sessions/real-cli-pollution", unexpected[str(codex_home)])
 
     def test_strict_global_digest_reports_volatile_changes(self):
         harness = load_harness()
@@ -120,7 +141,7 @@ class IsolatedHarnessTests(unittest.TestCase):
             unexpected = harness.unexpected_global_config_changes(
                 before,
                 after,
-                {str(codex_home): {"sessions"}},
+                {str(codex_home): {"sessions/x"}},
                 strict_global_digest=True,
             )
             self.assertIn(str(codex_home), unexpected)
@@ -167,6 +188,10 @@ class IsolatedHarnessTests(unittest.TestCase):
         finally:
             server.shutdown()
             server.server_close()
+
+
+def tearDownModule() -> None:
+    cleanup_pycache()
 
 
 if __name__ == "__main__":
