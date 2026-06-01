@@ -144,6 +144,48 @@ class ValidateReleaseTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn("validate_release=ok", result.stdout)
 
+    def test_validate_release_allows_synced_generated_deletions(self):
+        with temp_repo() as repo:
+            source_path = "src/skills/llm-wiki-cloud-query/SKILL.md.tmpl"
+            generated_paths = [
+                "plugins/llm-wiki-client/skills/llm-wiki-cloud-query/SKILL.md",
+                "plugins/llm-wiki-client/codex/skills/llm-wiki-cloud-query/SKILL.md",
+                "dist/opencode/.opencode/skills/llm-wiki-cloud-query/SKILL.md",
+            ]
+
+            source = repo / source_path
+            source.unlink()
+            run_sync(repo)
+
+            status_before_stage = subprocess.run(
+                ["git", "status", "--short", "--", *generated_paths],
+                cwd=repo,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            for generated_path in generated_paths:
+                with self.subTest(generated_path=generated_path):
+                    self.assertIn(f" D {generated_path}", status_before_stage.stdout)
+
+            subprocess.run(["git", "add", "--all"], cwd=repo, check=True)
+            status_after_stage = subprocess.run(
+                ["git", "status", "--short", "--", source_path, *generated_paths],
+                cwd=repo,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            self.assertIn(f"D  {source_path}", status_after_stage.stdout)
+            for generated_path in generated_paths:
+                with self.subTest(staged_generated_path=generated_path):
+                    self.assertIn(f"D  {generated_path}", status_after_stage.stdout)
+
+            result = run_validate(repo)
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("validate_release=ok", result.stdout)
+
     def test_validate_release_rejects_new_generated_outputs(self):
         with temp_repo() as repo:
             source = repo / "src/skills/llm-wiki-cloud-new/SKILL.md.tmpl"
