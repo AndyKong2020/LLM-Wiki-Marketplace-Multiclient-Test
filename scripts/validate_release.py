@@ -15,6 +15,7 @@ SEMVER_RE = re.compile(r"\d+\.\d+\.\d+")
 OPENCODE_SKILL_NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 TOKEN_RE = re.compile(r"\bllmw_(?!<token-from-operator>)(?!token-from-operator\b)[A-Za-z0-9_=-]{12,}\b")
 
+README_MARKETPLACE_ADD_COMMAND = "/plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Cloud"
 JSON_FILES = [
     ".claude-plugin/marketplace.json",
     ".agents/plugins/marketplace.json",
@@ -123,6 +124,51 @@ def get_manifest_version(data: Any, relative_path: str) -> str:
     return version
 
 
+def get_name(data: dict[str, Any], relative_path: str) -> str:
+    name = data.get("name")
+    if not isinstance(name, str) or not name:
+        fail(f"name missing in {relative_path}")
+    return name
+
+
+def get_marketplace_plugin_name(data: Any, relative_path: str) -> tuple[str, str]:
+    marketplace = require_dict(data, relative_path)
+    marketplace_name = get_name(marketplace, relative_path)
+    plugins = marketplace.get("plugins")
+    if not isinstance(plugins, list) or not plugins:
+        fail(f"marketplace has no plugins in {relative_path}")
+    plugin = plugins[0]
+    if not isinstance(plugin, dict):
+        fail(f"marketplace plugin entry is not an object in {relative_path}")
+    plugin_name = plugin.get("name")
+    if not isinstance(plugin_name, str) or not plugin_name:
+        fail(f"marketplace plugin name missing in {relative_path}")
+    return marketplace_name, plugin_name
+
+
+def get_readme_command_names(json_data: dict[str, Any]) -> tuple[str, str]:
+    marketplace_names = set()
+    plugin_names = set()
+
+    for relative_path in [".claude-plugin/marketplace.json", ".agents/plugins/marketplace.json"]:
+        marketplace_name, plugin_name = get_marketplace_plugin_name(json_data[relative_path], relative_path)
+        marketplace_names.add(marketplace_name)
+        plugin_names.add(plugin_name)
+
+    for relative_path in [
+        "plugins/llm-wiki-client/.claude-plugin/plugin.json",
+        "plugins/llm-wiki-client/.codex-plugin/plugin.json",
+    ]:
+        manifest = require_dict(json_data[relative_path], relative_path)
+        plugin_names.add(get_name(manifest, relative_path))
+
+    if len(marketplace_names) != 1:
+        fail(f"marketplace name mismatch across generated JSON: {sorted(marketplace_names)}")
+    if len(plugin_names) != 1:
+        fail(f"plugin name mismatch across generated JSON: {sorted(plugin_names)}")
+    return next(iter(plugin_names)), next(iter(marketplace_names))
+
+
 def parse_frontmatter(relative_path: str) -> dict[str, str]:
     text = read_text(relative_path)
     lines = text.splitlines()
@@ -182,6 +228,33 @@ def check_codex_manifest_skill_root(json_data: dict[str, Any]) -> None:
     expected = "./codex/skills/"
     if actual != expected:
         fail(f"Codex manifest skill root mismatch in {relative_path}: {actual} != {expected}")
+
+
+def check_readme_install_commands(json_data: dict[str, Any]) -> None:
+    plugin_name, marketplace_name = get_readme_command_names(json_data)
+    readme = read_text("README.md")
+    expected_commands = {
+        "/plugin marketplace add ": README_MARKETPLACE_ADD_COMMAND,
+        "/plugin install ": f"/plugin install {plugin_name}@{marketplace_name}",
+        "/plugin update ": f"/plugin update {plugin_name}@{marketplace_name}",
+        "/plugin marketplace update ": f"/plugin marketplace update {marketplace_name}",
+    }
+    required_prefixes = {
+        "/plugin marketplace add ",
+        "/plugin install ",
+        "/plugin update ",
+    }
+    readme_commands = {
+        match.group(1).strip()
+        for match in re.finditer(r"(?m)^\s*(/plugin\s+[^\n`]+?)\s*$", readme)
+    }
+
+    for prefix, expected in expected_commands.items():
+        if prefix in required_prefixes and expected not in readme_commands:
+            fail(f"README install command missing or stale in README.md: expected {expected}")
+        for command in sorted(command for command in readme_commands if command.startswith(prefix)):
+            if command != expected:
+                fail(f"README install command mismatch in README.md: {command} != {expected}")
 
 
 def check_canonical_mcp_url(json_data: dict[str, Any]) -> None:
@@ -293,6 +366,7 @@ def validate() -> None:
     json_data = load_json_files()
     check_versions(version, json_data)
     check_codex_manifest_skill_root(json_data)
+    check_readme_install_commands(json_data)
     check_canonical_mcp_url(json_data)
     check_opencode_skill_names()
     check_command_directories()

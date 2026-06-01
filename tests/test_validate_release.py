@@ -51,6 +51,23 @@ class ValidateReleaseTests(unittest.TestCase):
         finally:
             subprocess.run(["python3", "scripts/sync_adapters.py"], cwd=ROOT, check=True)
 
+    def test_validate_release_rejects_readme_install_command_name_mismatch(self):
+        readme = ROOT / "README.md"
+        original = readme.read_text(encoding="utf-8")
+        marketplace = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
+        expected = f"/plugin install {marketplace['plugins'][0]['name']}@{marketplace['name']}"
+        self.assertIn(expected, original)
+        readme.write_text(
+            original.replace(expected, f"/plugin install wrong-client@{marketplace['name']}", 1),
+            encoding="utf-8",
+        )
+        try:
+            result = subprocess.run(["python3", "scripts/validate_release.py"], cwd=ROOT, text=True, capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("README install command", result.stdout + result.stderr)
+        finally:
+            readme.write_text(original, encoding="utf-8")
+
 
 if __name__ == "__main__":
     unittest.main()
