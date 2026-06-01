@@ -55,9 +55,76 @@ class IsolatedHarnessTests(unittest.TestCase):
             harness.GLOBAL_PATHS = [codex_home]
 
             before = harness.snapshot_global_configs()
+            before_digest = harness.tree_digest(codex_home)
             (sessions / "x").write_text("session\n", encoding="utf-8")
 
             self.assertNotEqual(before, harness.snapshot_global_configs())
+            self.assertNotEqual(before_digest, harness.tree_digest(codex_home))
+
+    def test_unmarked_codex_plugins_change_is_unexpected(self):
+        harness = load_harness()
+        with tempfile.TemporaryDirectory(prefix="isolated-harness-test-") as temp_dir:
+            root = Path(temp_dir)
+            codex_home = root / ".codex"
+            codex_home.mkdir()
+            harness.GLOBAL_PATHS = [codex_home]
+
+            before = harness.snapshot_global_configs()
+            plugins = codex_home / "plugins"
+            plugins.mkdir()
+            (plugins / "probe").write_text("global pollution\n", encoding="utf-8")
+            after = harness.snapshot_global_configs()
+
+            unexpected = harness.unexpected_global_config_changes(
+                before,
+                after,
+                {str(codex_home): {"sessions"}},
+            )
+            self.assertIn(str(codex_home), unexpected)
+            self.assertIn("plugins/probe", unexpected[str(codex_home)])
+
+    def test_volatile_codex_sessions_change_is_allowed(self):
+        harness = load_harness()
+        with tempfile.TemporaryDirectory(prefix="isolated-harness-test-") as temp_dir:
+            root = Path(temp_dir)
+            codex_home = root / ".codex"
+            sessions = codex_home / "sessions"
+            sessions.mkdir(parents=True)
+            harness.GLOBAL_PATHS = [codex_home]
+
+            probe_before = harness.snapshot_global_configs()
+            (sessions / "during-probe").write_text("external\n", encoding="utf-8")
+            probe_after = harness.snapshot_global_configs()
+            volatile = harness.detect_volatile_top_levels(probe_before, probe_after)
+
+            before = harness.snapshot_global_configs()
+            (sessions / "after-probe").write_text("external later\n", encoding="utf-8")
+            after = harness.snapshot_global_configs()
+
+            self.assertEqual({str(codex_home): {"sessions"}}, volatile)
+            self.assertEqual({}, harness.unexpected_global_config_changes(before, after, volatile))
+
+    def test_strict_global_digest_reports_volatile_changes(self):
+        harness = load_harness()
+        with tempfile.TemporaryDirectory(prefix="isolated-harness-test-") as temp_dir:
+            root = Path(temp_dir)
+            codex_home = root / ".codex"
+            sessions = codex_home / "sessions"
+            sessions.mkdir(parents=True)
+            harness.GLOBAL_PATHS = [codex_home]
+
+            before = harness.snapshot_global_configs()
+            (sessions / "x").write_text("session\n", encoding="utf-8")
+            after = harness.snapshot_global_configs()
+
+            unexpected = harness.unexpected_global_config_changes(
+                before,
+                after,
+                {str(codex_home): {"sessions"}},
+                strict_global_digest=True,
+            )
+            self.assertIn(str(codex_home), unexpected)
+            self.assertIn("sessions/x", unexpected[str(codex_home)])
 
     def test_isolated_env_redirects_all_client_config_paths(self):
         harness = load_harness()
