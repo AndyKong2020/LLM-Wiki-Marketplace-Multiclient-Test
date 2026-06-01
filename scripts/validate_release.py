@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +39,15 @@ GENERATED_DIFF_PATHS = [
     "plugins/llm-wiki-client",
     "dist/opencode",
 ]
+TEMP_COPY_IGNORE = shutil.ignore_patterns(
+    ".git",
+    ".idea",
+    "__pycache__",
+    "*.pyc",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+)
 SKILL_ROOTS = [
     "plugins/llm-wiki-client/skills",
     "plugins/llm-wiki-client/codex/skills",
@@ -65,6 +77,10 @@ def fail(message: str) -> None:
 
 def rel(path: Path) -> str:
     return str(path.relative_to(ROOT))
+
+
+def rel_to(path: Path, root: Path) -> str:
+    return str(path.relative_to(root))
 
 
 def read_text(relative_path: str) -> str:
@@ -326,23 +342,34 @@ def check_no_token_like_strings() -> None:
             fail(f"token-like string in {rel(path)}")
 
 
-def git_diff_quiet() -> int:
-    result = subprocess.run(["git", "diff", "--quiet", "--", *GENERATED_DIFF_PATHS], cwd=ROOT)
-    return result.returncode
+def summarize_items(items: list[str], *, limit: int = 8) -> str:
+    shown = items[:limit]
+    more = len(items) - len(shown)
+    summary = ", ".join(shown)
+    if more:
+        summary = f"{summary}, ... (+{more} more)"
+    return summary
 
 
-def check_git_diff_result(returncode: int, stage: str) -> bool:
-    if returncode == 0:
-        return False
-    if returncode == 1:
-        return True
-    fail(f"git diff failed during {stage} generated check with exit code {returncode}")
+def git_status_generated_paths() -> list[str]:
+    result = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=all", "--", *GENERATED_DIFF_PATHS],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        if detail:
+            fail(f"git status failed during generated check: {detail}")
+        fail(f"git status failed during generated check with exit code {result.returncode}")
+    return [line for line in result.stdout.splitlines() if line.strip()]
 
 
-def run_sync_adapters() -> None:
+def run_sync_adapters(root: Path) -> None:
     result = subprocess.run(
         [sys.executable, "scripts/sync_adapters.py"],
-        cwd=ROOT,
+        cwd=root,
         text=True,
         capture_output=True,
     )
@@ -353,12 +380,66 @@ def run_sync_adapters() -> None:
         fail(f"sync_adapters.py failed with exit code {result.returncode}")
 
 
+GeneratedSnapshot = dict[str, tuple[str, int, bytes | str]]
+
+
+def snapshot_generated_paths(root: Path) -> GeneratedSnapshot:
+    snapshot: GeneratedSnapshot = {}
+    for relative_root in GENERATED_DIFF_PATHS:
+        generated_root = root / relative_root
+        if not generated_root.exists():
+            continue
+        paths = [generated_root]
+        if generated_root.is_dir() and not generated_root.is_symlink():
+            paths = sorted(generated_root.rglob("*"))
+        for path in paths:
+            if path.is_dir() and not path.is_symlink():
+                continue
+            relative_path = rel_to(path, root)
+            if path.is_symlink():
+                snapshot[relative_path] = ("symlink", 0, os.readlink(path))
+                continue
+            if path.is_file():
+                mode = path.stat().st_mode & 0o777
+                snapshot[relative_path] = ("file", mode, path.read_bytes())
+    return snapshot
+
+
+def describe_generated_snapshot_changes(before: GeneratedSnapshot, after: GeneratedSnapshot) -> list[str]:
+    before_paths = set(before)
+    after_paths = set(after)
+    added = sorted(after_paths - before_paths)
+    removed = sorted(before_paths - after_paths)
+    modified = sorted(path for path in before_paths & after_paths if before[path] != after[path])
+
+    details = []
+    if modified:
+        details.append(f"modified generated outputs: {summarize_items(modified)}")
+    if added:
+        details.append(f"untracked generated outputs after sync: {summarize_items(added)}")
+    if removed:
+        details.append(f"removed generated outputs after sync: {summarize_items(removed)}")
+    return details
+
+
 def check_generated_files_current() -> None:
-    stale_before_sync = check_git_diff_result(git_diff_quiet(), "pre-sync")
-    run_sync_adapters()
-    stale_after_sync = check_git_diff_result(git_diff_quiet(), "post-sync")
-    if stale_before_sync or stale_after_sync:
-        fail("generated files are stale")
+    dirty_generated_paths = git_status_generated_paths()
+    if dirty_generated_paths:
+        fail(
+            "generated files are stale: dirty generated paths before sync: "
+            f"{summarize_items(dirty_generated_paths)}"
+        )
+
+    with tempfile.TemporaryDirectory(prefix="validate-release-") as temp_dir:
+        temp_root = Path(temp_dir) / "repo"
+        shutil.copytree(ROOT, temp_root, ignore=TEMP_COPY_IGNORE)
+        before_sync = snapshot_generated_paths(temp_root)
+        run_sync_adapters(temp_root)
+        after_sync = snapshot_generated_paths(temp_root)
+
+    changes = describe_generated_snapshot_changes(before_sync, after_sync)
+    if changes:
+        fail(f"generated files are stale: {'; '.join(changes)}")
 
 
 def validate() -> None:
