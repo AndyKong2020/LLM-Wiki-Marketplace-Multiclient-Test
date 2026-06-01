@@ -2,4 +2,7 @@
 .claude/settings.local.json
 .agents-log/
 .claudian/
-
+__pycache__/
+*.pyc
+.pytest_cache/
+.llm-wiki-test-root/
