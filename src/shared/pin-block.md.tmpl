@@ -1,7 +1,5 @@
 <!-- LLM-WIKI:BEGIN -->
 本项目已挂载云端 CANN-Infer-Wiki（NPU 大模型推理优化知识库）。
-instruction_file: {{instruction_file}}
-mcp_server: {{mcp_server_name}}
 mcp_url: {{mcp_url}}
 
 涉及下列任务时必须使用 {{query_skill_name}} skill：
@@ -11,7 +9,7 @@ mcp_url: {{mcp_url}}
 
 涉及 subagent 时，必须将 {{query_skill_name}} skill 的使用说明注入到拉起 subagent 的 prompt 中。
 
-知识检索一律通过 {{mcp_server_name}} MCP 工具：{{wiki_search_tool}}、{{wiki_get_page_tool}}。
+知识检索一律通过 MCP 工具：{{wiki_search_tool}}、{{wiki_get_page_tool}}。
 需要引用图片时，使用 wiki_get_page 返回 content 中的 /assets HTTP URL 或 assets manifest。
 
 每次使用 {{query_skill_name}} 后，必须把页面级记录写到当前阶段 progress.md 同级的 wiki_usage.md，并把查询摘要同步写入 progress.md。

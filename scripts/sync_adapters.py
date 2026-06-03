@@ -39,6 +39,16 @@ GENERATED_MARKER_CLEANUP_DIRS = [
     "dist/opencode/.opencode/commands",
     "dist/opencode/.opencode/skills",
 ]
+MANAGED_SKILL_NAMES = {
+    "llm-wiki-cloud-mount",
+    "llm-wiki-cloud-query",
+    "llm-wiki-cloud-backflow",
+}
+GENERATED_SKILL_ROOTS = [
+    "plugins/llm-wiki-client-claude/skills",
+    "plugins/llm-wiki-client-codex/skills",
+    "plugins/llm-wiki-client-opencode/skills",
+]
 
 
 def load_values() -> dict[str, str]:
@@ -63,6 +73,10 @@ def platform_values(base: dict[str, str], platform: str) -> dict[str, str]:
                 "instruction_file": "CLAUDE.md",
                 "wiki_search_tool": "mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_search",
                 "wiki_get_page_tool": "mcp__plugin_llm-wiki-client_cann-infer-wiki-cloud__wiki_get_page",
+                "project_context_label": "当前 Claude Code 项目",
+                "workspace_root_phrase": "当前 Claude Code 项目目录",
+                "mcp_config_summary": "MCP 客户端配置由插件 root 的 `.mcp.json` 自带，安装插件后自动注册：",
+                "mcp_mutation_guard": "本 skill 不 clone wiki 仓、不启动本机 server、不写 `.mcp.json`、不调用 `claude mcp add`。",
             }
         )
     elif platform in {"codex", "opencode"}:
@@ -71,6 +85,10 @@ def platform_values(base: dict[str, str], platform: str) -> dict[str, str]:
                 "instruction_file": "AGENTS.md",
                 "wiki_search_tool": "cann-infer-wiki-cloud wiki_search",
                 "wiki_get_page_tool": "cann-infer-wiki-cloud wiki_get_page",
+                "project_context_label": "当前项目",
+                "workspace_root_phrase": "当前项目根目录",
+                "mcp_config_summary": "MCP 客户端配置由当前平台 adapter 提供：",
+                "mcp_mutation_guard": "本 skill 不 clone wiki 仓、不启动本机 server、不修改平台 MCP 配置、不调用本地 MCP 注册命令。",
             }
         )
     else:
@@ -94,18 +112,14 @@ def render_template(template_path: Path, values: dict[str, str]) -> str:
     return rendered
 
 
+def with_pin_block(values: dict[str, str]) -> dict[str, str]:
+    values = dict(values)
+    values["pin_block"] = render_template(ROOT / "src/shared/pin-block.md.tmpl", values).rstrip()
+    return values
+
+
 def ensure_trailing_newline(text: str) -> str:
     return text if text.endswith("\n") else text + "\n"
-
-
-def with_markdown_marker(text: str) -> str:
-    text = ensure_trailing_newline(text)
-    if text.startswith("---\n"):
-        frontmatter_end = text.find("\n---\n", 4)
-        if frontmatter_end != -1:
-            insert_at = frontmatter_end + len("\n---\n")
-            return f"{text[:insert_at]}\n{GENERATED_MARKDOWN_MARKER}\n\n{text[insert_at:]}"
-    return f"{GENERATED_MARKDOWN_MARKER}\n\n{text}"
 
 
 def write_text(path: Path, text: str) -> None:
@@ -118,14 +132,11 @@ def write_rendered_template(
     output_rel: str,
     values: dict[str, str],
     *,
-    markdown_marker: bool = False,
     validate_json: bool = False,
 ) -> None:
     rendered = render_template(ROOT / template_rel, values)
     if validate_json:
         json.loads(rendered)
-    if markdown_marker:
-        rendered = with_markdown_marker(rendered)
     write_text(ROOT / output_rel, rendered)
 
 
@@ -168,6 +179,12 @@ def clean_generated_dirs() -> None:
 
     for rel in GENERATED_MARKER_CLEANUP_DIRS:
         clean_generated_files_with_markers(ROOT / rel)
+
+    for root_rel in GENERATED_SKILL_ROOTS:
+        root = ROOT / root_rel
+        for skill_name in MANAGED_SKILL_NAMES:
+            unlink_known_file(root / skill_name / "SKILL.md")
+            prune_empty_dirs(root / skill_name, root)
 
     prune_empty_dirs(ROOT / "dist/opencode", ROOT / "dist")
 
@@ -231,14 +248,14 @@ def generate_skills(values: dict[str, str], output_root: str) -> None:
     for template_path in sorted((ROOT / "src/skills").glob("*/SKILL.md.tmpl")):
         skill_name = template_path.parent.name
         rendered = render_template(template_path, values)
-        write_text(ROOT / output_root / skill_name / "SKILL.md", with_markdown_marker(rendered))
+        write_text(ROOT / output_root / skill_name / "SKILL.md", rendered)
 
 
 def main() -> None:
     base_values = load_values()
-    claude = platform_values(base_values, "claude")
-    codex = platform_values(base_values, "codex")
-    opencode = platform_values(base_values, "opencode")
+    claude = with_pin_block(platform_values(base_values, "claude"))
+    codex = with_pin_block(platform_values(base_values, "codex"))
+    opencode = with_pin_block(platform_values(base_values, "opencode"))
 
     clean_generated_dirs()
     generate_manifests(base_values)
