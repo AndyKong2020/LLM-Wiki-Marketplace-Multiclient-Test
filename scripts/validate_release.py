@@ -18,7 +18,10 @@ SEMVER_RE = re.compile(r"\d+\.\d+\.\d+")
 OPENCODE_SKILL_NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 TOKEN_RE = re.compile(r"\bllmw_(?!<token-from-operator>)(?!token-from-operator\b)[A-Za-z0-9_=-]{12,}\b")
 
-README_MARKETPLACE_ADD_COMMAND = "/plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Cloud"
+README_MARKETPLACE_ADD_COMMAND = (
+    "/plugin marketplace add "
+    "AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test@codex/multiclient-distribution-spec"
+)
 JSON_FILES = [
     ".claude-plugin/marketplace.json",
     ".agents/plugins/marketplace.json",

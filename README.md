@@ -1,35 +1,55 @@
-# LLM-Wiki Marketplace
+# LLM-Wiki Marketplace Test
 
-本仓库是 **CANN-Infer-Wiki** 云服务的多客户端插件市场，面向 Claude Code、Codex
-和 OpenCode 分发同一套云端 wiki 读写入口。
+本仓库是 **CANN-Infer-Wiki** 云服务的多客户端插件市场测试仓库，面向 Claude Code、Codex
+和 OpenCode 分发同一套云端 wiki 读写入口。这里用于隔离验证，不要把测试分支推到生产
+marketplace 仓库。
 
-Marketplace 名称：`llm-wiki-cloud`
-插件：`llm-wiki-client@llm-wiki-cloud`
+GitHub 测试仓库：`AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test`
+测试 ref：`codex/multiclient-distribution-spec`
+Marketplace 名称：`llm-wiki-cloud-test`
+插件：`llm-wiki-client@llm-wiki-cloud-test`
 
-## 三端安装、更新和使用
+## 模拟用户使用流程
+
+下面每段都使用临时配置目录，按真实用户路径测试安装、更新和使用，不写入生产
+marketplace，也不依赖一键 smoke 脚本。
 
 ### Claude Code
 
-安装：
+启动隔离 Claude Code 会话：
+
+```bash
+tmpdir="$(mktemp -d)"
+(
+  export HOME="$tmpdir/home"
+  export CLAUDE_CONFIG_DIR="$tmpdir/claude-config"
+  export CLAUDE_HOME="$tmpdir/claude-home"
+  mkdir -p "$HOME" "$CLAUDE_CONFIG_DIR" "$CLAUDE_HOME"
+  claude
+)
+```
+
+在 Claude Code 里粘贴安装：
 
 ```text
-/plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Cloud
-/plugin install llm-wiki-client@llm-wiki-cloud
+/plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test@codex/multiclient-distribution-spec
+/plugin install llm-wiki-client@llm-wiki-cloud-test
 /reload-plugins
 ```
 
-更新：
+在 Claude Code 里粘贴更新：
 
 ```text
-/plugin marketplace update llm-wiki-cloud
-/plugin update llm-wiki-client@llm-wiki-cloud
+/plugin marketplace update llm-wiki-cloud-test
+/plugin update llm-wiki-client@llm-wiki-cloud-test
 /reload-plugins
 ```
 
-使用：
+在 Claude Code 里模拟使用：
 
 ```text
 /llm-wiki-client:wiki-cloud-mount
+请用 CANN-Infer-Wiki 查询 AscendC tiling 优化的注意事项，回答 3 条要点。
 /llm-wiki-client:wiki-cloud-backflow
 ```
 
@@ -41,50 +61,91 @@ wiki。任务结束后可运行 `/llm-wiki-client:wiki-cloud-backflow` 创建本
 
 ### Codex
 
-安装：
+启动隔离 shell 并安装：
 
 ```bash
-codex plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Cloud --ref main
-codex plugin add llm-wiki-client@llm-wiki-cloud
+tmpdir="$(mktemp -d)"
+export HOME="$tmpdir/home"
+export XDG_CONFIG_HOME="$tmpdir/xdg-config"
+export XDG_DATA_HOME="$tmpdir/xdg-data"
+export XDG_CACHE_HOME="$tmpdir/xdg-cache"
+export CODEX_HOME="$tmpdir/codex-home"
+export AGENTS_HOME="$tmpdir/agents-home"
+mkdir -p "$HOME" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_CACHE_HOME" "$CODEX_HOME" "$AGENTS_HOME"
+codex plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test --ref codex/multiclient-distribution-spec
+codex plugin add llm-wiki-client@llm-wiki-cloud-test
 ```
 
 更新：
 
 ```bash
-codex plugin marketplace upgrade
-codex plugin remove llm-wiki-client@llm-wiki-cloud
-codex plugin add llm-wiki-client@llm-wiki-cloud
+codex plugin marketplace upgrade llm-wiki-cloud-test
+codex plugin remove llm-wiki-client@llm-wiki-cloud-test
+codex plugin add llm-wiki-client@llm-wiki-cloud-test
 ```
 
-使用：让 Codex 执行 `llm-wiki-cloud-mount`，在 LLM/NPU 推理优化任务中使用
-`llm-wiki-cloud-query`，任务结束后执行 `llm-wiki-cloud-backflow`。Codex adapter
-会通过插件 manifest 指向 `plugins/llm-wiki-client/codex/skills/`。
+启动 Codex 后模拟使用：
+
+```bash
+codex
+```
+
+在 Codex 里输入：
+
+```text
+先执行 llm-wiki-cloud-mount，挂载当前项目的 CANN-Infer-Wiki。
+请使用 llm-wiki-cloud-query 查询 AscendC tiling 优化的注意事项，回答 3 条要点。
+执行 llm-wiki-cloud-backflow，为这次测试创建本地任务归档，不上传。
+```
 
 ### OpenCode
 
-安装或更新：
+从测试分支远程安装到隔离目录：
 
 ```bash
-curl -fsSL https://wiki.andykong.top/plugin/llm-wiki-client/install-opencode.sh | sh
+tmpdir="$(mktemp -d)"
+git clone --depth 1 --branch codex/multiclient-distribution-spec \
+  git@github.com:AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test.git "$tmpdir/marketplace"
+bash "$tmpdir/marketplace/dist/opencode/install-opencode.sh" --prefix "$tmpdir/opencode"
 ```
 
-使用：
+更新：
+
+```bash
+git -C "$tmpdir/marketplace" pull --ff-only
+bash "$tmpdir/marketplace/dist/opencode/install-opencode.sh" --prefix "$tmpdir/opencode"
+```
+
+启动隔离 OpenCode 会话：
+
+```bash
+export HOME="$tmpdir/home"
+export XDG_CONFIG_HOME="$tmpdir/xdg-config"
+export XDG_DATA_HOME="$tmpdir/xdg-data"
+export XDG_CACHE_HOME="$tmpdir/xdg-cache"
+export OPENCODE_CONFIG="$tmpdir/opencode/opencode.json"
+export OPENCODE_CONFIG_DIR="$tmpdir/opencode"
+mkdir -p "$HOME" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_CACHE_HOME" "$OPENCODE_CONFIG_DIR"
+opencode
+```
+
+在 OpenCode 里模拟使用：
 
 ```text
 /wiki-cloud-mount
+请用 CANN-Infer-Wiki 查询 AscendC tiling 优化的注意事项，回答 3 条要点。
 /wiki-cloud-backflow
 ```
 
-OpenCode installer 会把 command、skill 和 MCP config 写入 OpenCode 配置目录；重新运行
-`install-opencode.sh` 即可覆盖为当前发布版本。
+OpenCode installer 会把 command、skill 和 MCP config 写入 `--prefix` 指定目录；省略
+`--prefix` 才会写入默认 `~/.config/opencode`。重新运行 `install-opencode.sh` 即可覆盖为当前测试版本。
 
 ### 隔离测试仓库
 
-多客户端开发先推 private 测试仓库 remote `multiclient-test`，不要推 `origin` 或
-`cloud`：
+多客户端开发先推测试仓库 remote `multiclient-test`，不要推 `origin` 或 `cloud`：
 
 ```bash
-git push multiclient-test "$BRANCH"
+git push multiclient-test codex/multiclient-distribution-spec
 ```
 
 确认三端 smoke 测试和人工验收完成后，再由维护者决定是否发布到正式 remote。

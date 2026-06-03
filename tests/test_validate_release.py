@@ -229,14 +229,26 @@ class DocumentationTests(unittest.TestCase):
             "Codex",
             "OpenCode",
             "multiclient-test",
-            "/plugin install llm-wiki-client@llm-wiki-cloud",
-            "codex plugin add llm-wiki-client@llm-wiki-cloud",
+            "llm-wiki-cloud-test",
+            "AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test@codex/multiclient-distribution-spec",
+            "/plugin install llm-wiki-client@llm-wiki-cloud-test",
+            "codex plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test --ref codex/multiclient-distribution-spec",
+            "codex plugin marketplace upgrade llm-wiki-cloud-test",
+            "codex plugin add llm-wiki-client@llm-wiki-cloud-test",
             "install-opencode.sh",
+            "模拟用户使用流程",
+            "CLAUDE_CONFIG_DIR",
+            "CODEX_HOME",
+            "OPENCODE_CONFIG_DIR",
             "/llm-wiki-client:wiki-cloud-mount",
             "/llm-wiki-client:wiki-cloud-backflow",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, text)
+        self.assertNotIn("llm-wiki-client@llm-wiki-cloud\n", text)
+        self.assertNotIn("LLM-Wiki-Marketplace-Cloud", text)
+        self.assertNotIn("python3 scripts/test_isolated_clients.py", text)
+        self.assertNotIn("codex plugin marketplace upgrade\n", text)
         self.assertNotIn("/llm-wiki-client:llm-wiki-cloud-mount", text)
 
     def test_plugin_readme_mentions_generated_adapters(self):
