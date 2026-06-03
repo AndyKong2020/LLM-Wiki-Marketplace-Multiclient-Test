@@ -254,12 +254,16 @@ def check_readme_install_commands(json_data: dict[str, Any]) -> None:
         "/plugin marketplace add ": README_MARKETPLACE_ADD_COMMAND,
         "/plugin install ": f"/plugin install {plugin_name}@{marketplace_name}",
         "/plugin update ": f"/plugin update {plugin_name}@{marketplace_name}",
+        "/plugin uninstall ": f"/plugin uninstall {plugin_name}@{marketplace_name}",
         "/plugin marketplace update ": f"/plugin marketplace update {marketplace_name}",
+        "/plugin marketplace remove ": f"/plugin marketplace remove {marketplace_name}",
     }
     required_prefixes = {
         "/plugin marketplace add ",
         "/plugin install ",
         "/plugin update ",
+        "/plugin uninstall ",
+        "/plugin marketplace remove ",
     }
     readme_commands = {
         match.group(1).strip()

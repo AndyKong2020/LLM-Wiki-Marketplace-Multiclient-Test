@@ -9,6 +9,81 @@ GitHub 测试仓库：`AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test`
 Marketplace 名称：`llm-wiki-cloud-test`
 插件：`llm-wiki-client@llm-wiki-cloud-test`
 
+## 安装维护命令速查
+
+### Claude Code
+
+在 Claude Code 里粘贴：
+
+```text
+# 添加 marketplace
+/plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test
+
+# 安装插件
+/plugin install llm-wiki-client@llm-wiki-cloud-test
+/reload-plugins
+
+# 更新 marketplace
+/plugin marketplace update llm-wiki-cloud-test
+
+# 更新插件
+/plugin update llm-wiki-client@llm-wiki-cloud-test
+/reload-plugins
+
+# 卸载插件
+/plugin uninstall llm-wiki-client@llm-wiki-cloud-test
+/reload-plugins
+
+# 移除 marketplace
+/plugin marketplace remove llm-wiki-cloud-test
+```
+
+等价 CLI 命令：
+
+```bash
+claude plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test
+claude plugin install llm-wiki-client@llm-wiki-cloud-test
+claude plugin marketplace update llm-wiki-cloud-test
+claude plugin update llm-wiki-client@llm-wiki-cloud-test
+claude plugin uninstall llm-wiki-client@llm-wiki-cloud-test
+claude plugin marketplace remove llm-wiki-cloud-test
+```
+
+### Codex
+
+```bash
+# 添加 marketplace
+codex plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test
+
+# 安装插件
+codex plugin add llm-wiki-client@llm-wiki-cloud-test
+
+# 更新 marketplace
+codex plugin marketplace upgrade llm-wiki-cloud-test
+
+# 更新插件
+codex plugin remove llm-wiki-client@llm-wiki-cloud-test
+codex plugin add llm-wiki-client@llm-wiki-cloud-test
+
+# 卸载插件
+codex plugin remove llm-wiki-client@llm-wiki-cloud-test
+
+# 移除 marketplace
+codex plugin marketplace remove llm-wiki-cloud-test
+```
+
+### OpenCode
+
+OpenCode 没有独立 marketplace source；添加、安装、更新都是重新运行 bootstrap。
+
+```bash
+# 添加 / 安装 / 更新
+curl -fsSL https://raw.githubusercontent.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test/main/plugins/llm-wiki-client-opencode/bootstrap.sh | bash
+
+# 卸载 / 移除
+curl -fsSL https://raw.githubusercontent.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test/main/plugins/llm-wiki-client-opencode/uninstall.sh | bash
+```
+
 ## 模拟用户使用流程
 
 下面每段都使用临时配置目录，按真实用户路径测试安装、更新和使用，不写入生产
