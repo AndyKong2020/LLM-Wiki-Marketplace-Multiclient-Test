@@ -97,6 +97,7 @@ class TemplateInventoryTests(unittest.TestCase):
             "platforms/opencode/opencode.json.tmpl",
             "platforms/opencode/bootstrap.sh.tmpl",
             "platforms/opencode/install-opencode.sh.tmpl",
+            "platforms/opencode/uninstall.sh.tmpl",
         ]
         for rel in required:
             with self.subTest(rel=rel):
@@ -243,6 +244,7 @@ class SyncAdaptersTests(unittest.TestCase):
             "dist/opencode/opencode.json",
             "dist/opencode/bootstrap.sh",
             "dist/opencode/install-opencode.sh",
+            "dist/opencode/uninstall.sh",
             "dist/opencode/.opencode/commands/wiki-cloud-mount.md",
             "dist/opencode/.opencode/commands/wiki-cloud-backflow.md",
             "dist/opencode/.opencode/skills/llm-wiki-cloud-mount/SKILL.md",

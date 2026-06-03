@@ -106,6 +106,12 @@ codex
 curl -fsSL https://raw.githubusercontent.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test/main/dist/opencode/bootstrap.sh | bash
 ```
 
+卸载：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test/main/dist/opencode/uninstall.sh | bash
+```
+
 隔离测试安装：
 
 ```bash
@@ -136,6 +142,7 @@ opencode
 
 OpenCode installer 默认写入全局 `~/.config/opencode`；重新运行同一条 `curl | bash`
 即可覆盖 command、skill，并合并更新 MCP config。`--prefix` 只用于隔离测试。
+卸载脚本只移除本插件的 command、skill 和 MCP entry，不删除用户其他 OpenCode 配置。
 
 ### 隔离测试仓库
 
@@ -203,6 +210,7 @@ plugins/llm-wiki-client/
 dist/opencode/
   bootstrap.sh
   install-opencode.sh
+  uninstall.sh
   opencode.json
   .opencode/
     commands/

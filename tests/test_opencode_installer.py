@@ -8,6 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = ROOT / "dist/opencode/install-opencode.sh"
+UNINSTALLER = ROOT / "dist/opencode/uninstall.sh"
 MCP_SERVER_NAME = "cann-infer-wiki-cloud"
 MCP_URL = "https://wiki.andykong.top/mcp"
 
@@ -123,6 +124,47 @@ class OpenCodeInstallerTests(unittest.TestCase):
                 opencode_config,
                 opencode_config_dir,
             )
+
+    def test_uninstall_removes_only_llm_wiki_files_and_mcp_entry(self):
+        with tempfile.TemporaryDirectory(prefix="opencode-installer-") as temp_dir:
+            temp_root = Path(temp_dir)
+            prefix = temp_root / "prefix"
+            prefix.mkdir()
+            existing_config = {
+                "$schema": "https://opencode.ai/config.json",
+                "theme": "legacy-dark",
+                "mcp": {
+                    "existing-server": {
+                        "type": "stdio",
+                        "command": ["run-existing-server"],
+                        "enabled": False,
+                    }
+                },
+            }
+            (prefix / "opencode.json").write_text(
+                json.dumps(existing_config, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            self.run_installer(temp_root, prefix)
+
+            result = subprocess.run(
+                ["bash", str(UNINSTALLER), "--prefix", str(prefix)],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+            self.assertFalse((prefix / "commands/wiki-cloud-mount.md").exists())
+            self.assertFalse((prefix / "commands/wiki-cloud-backflow.md").exists())
+            self.assertFalse((prefix / "skills/llm-wiki-cloud-mount").exists())
+            self.assertFalse((prefix / "skills/llm-wiki-cloud-query").exists())
+            self.assertFalse((prefix / "skills/llm-wiki-cloud-backflow").exists())
+
+            config = json.loads((prefix / "opencode.json").read_text(encoding="utf-8"))
+            self.assertEqual(config["theme"], "legacy-dark")
+            self.assertEqual(config["mcp"]["existing-server"], existing_config["mcp"]["existing-server"])
+            self.assertNotIn(MCP_SERVER_NAME, config["mcp"])
 
 
 if __name__ == "__main__":

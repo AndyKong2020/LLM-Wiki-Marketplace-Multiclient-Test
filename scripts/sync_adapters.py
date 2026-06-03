@@ -24,6 +24,7 @@ GENERATED_JSON_OUTPUTS = [
 GENERATED_DIRECT_OUTPUTS = [
     "dist/opencode/bootstrap.sh",
     "dist/opencode/install-opencode.sh",
+    "dist/opencode/uninstall.sh",
 ]
 GENERATED_MARKER_CLEANUP_DIRS = [
     "plugins/llm-wiki-client/commands",
@@ -238,6 +239,13 @@ def generate_manifests(base_values: dict[str, str]) -> None:
     write_rendered_template(
         "platforms/opencode/install-opencode.sh.tmpl",
         "dist/opencode/install-opencode.sh",
+        opencode,
+        shell_marker=True,
+        executable=True,
+    )
+    write_rendered_template(
+        "platforms/opencode/uninstall.sh.tmpl",
+        "dist/opencode/uninstall.sh",
         opencode,
         shell_marker=True,
         executable=True,
