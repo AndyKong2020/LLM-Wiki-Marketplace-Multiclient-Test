@@ -98,6 +98,8 @@ cann-infer-wiki-cloud wiki_get_page(
 - **事实类**：API 名、参数表、约束条件
 - 若 `frontmatter.contradictions` 非空：必读其中之一了解争议点（再次 `wiki_get_page`）
 
+TODO:链接下探
+
 ### 3.4 应用 + 记录
 
 把读到的内容应用到当前任务。如要拉起 subagent ，**在 prompt 里明确要求 subagent 也用 `llm-wiki-cloud-query` skill 和当前任务的 `wiki_usage.md`路径**（路径见 5 节）。
