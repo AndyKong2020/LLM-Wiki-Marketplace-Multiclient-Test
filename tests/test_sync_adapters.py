@@ -37,7 +37,7 @@ class SourceLayoutTests(unittest.TestCase):
         self.assertEqual(constants["plugin_name"], "llm-wiki-client")
         self.assertEqual(constants["marketplace_name"], "llm-wiki-cloud-test")
         self.assertEqual(constants["test_repository"], "AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test")
-        self.assertEqual(constants["test_ref"], "codex/multiclient-distribution-spec")
+        self.assertEqual(constants["test_ref"], "main")
         self.assertEqual(constants["mcp_url"], "https://wiki.andykong.top/mcp")
         self.assertEqual(constants["backflow_upload_url"], "https://wiki.andykong.top/upload/backflow")
         self.assertEqual(constants["version_manifest_url"], "https://wiki.andykong.top/plugin/llm-wiki-client/version.json")

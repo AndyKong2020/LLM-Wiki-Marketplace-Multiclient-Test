@@ -8,5 +8,5 @@
   "assets_base_url": "https://wiki.andykong.top/assets/",
   "version_manifest_url": "https://wiki.andykong.top/plugin/llm-wiki-client/version.json",
   "test_repository": "AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test",
-  "test_ref": "codex/multiclient-distribution-spec"
+  "test_ref": "main"
 }

@@ -14,7 +14,7 @@
         "name": "AndyKong"
       },
       "source": "./plugins/llm-wiki-client",
-      "homepage": "https://github.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test/tree/codex/multiclient-distribution-spec/plugins/llm-wiki-client",
+      "homepage": "https://github.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test/tree/main/plugins/llm-wiki-client",
       "repository": "https://github.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test",
       "category": "development",
       "keywords": [
