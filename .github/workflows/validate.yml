@@ -1,0 +1,35 @@
+name: Validate Marketplace
+
+on:
+  push:
+    branches:
+      - main
+      - codex/multiclient-distribution-spec
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Validate release artifacts
+        run: python3 scripts/validate_release.py
+
+      - name: Check sync is idempotent
+        run: |
+          python3 scripts/sync_adapters.py
+          git diff --exit-code -- \
+            .agents \
+            .claude-plugin \
+            plugins/llm-wiki-client \
+            dist/opencode
