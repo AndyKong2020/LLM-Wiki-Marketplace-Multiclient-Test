@@ -276,7 +276,7 @@ class SyncAdaptersTests(unittest.TestCase):
             text = path.read_text(encoding="utf-8")
             self.assertNotIn("{{", text)
             self.assertNotIn("}}", text)
-            self.assertIn("version: 1.1.6", text)
+            self.assertIn("version: 1.1.7", text)
             self.assertIn("https://wiki.andykong.top/mcp", text)
 
     def test_sync_generates_platform_specific_instruction_targets(self):
