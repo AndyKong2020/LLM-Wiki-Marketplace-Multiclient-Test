@@ -31,6 +31,6 @@ jobs:
           git diff --exit-code -- \
             .agents \
             .claude-plugin \
-            plugins/llm-wiki-client \
+            plugins/llm-wiki-client-claude \
             plugins/llm-wiki-client-codex \
-            dist/opencode
+            plugins/llm-wiki-client-opencode

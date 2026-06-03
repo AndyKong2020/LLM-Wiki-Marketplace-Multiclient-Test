@@ -15,6 +15,10 @@ TEMPLATE_SLOT_RE = re.compile(r"{{([a-zA-Z0-9_]+)}}")
 EXECUTABLE_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH
 GENERATED_JSON_OUTPUTS = [
     ".agents/plugins/marketplace.json",
+    "plugins/llm-wiki-client-claude/.claude-plugin/plugin.json",
+    "plugins/llm-wiki-client-claude/.mcp.json",
+    "plugins/llm-wiki-client-opencode/opencode.json",
+    # Legacy generated paths kept here so sync removes stale files after layout changes.
     "plugins/llm-wiki-client/.mcp.json",
     "plugins/llm-wiki-client/.codex-plugin/plugin.json",
     "plugins/llm-wiki-client-codex/.codex-plugin/plugin.json",
@@ -24,15 +28,21 @@ GENERATED_JSON_OUTPUTS = [
     "dist/opencode/opencode.json",
 ]
 GENERATED_DIRECT_OUTPUTS = [
+    "plugins/llm-wiki-client-opencode/bootstrap.sh",
+    "plugins/llm-wiki-client-opencode/install-opencode.sh",
+    "plugins/llm-wiki-client-opencode/uninstall.sh",
+    # Legacy generated paths kept here so sync removes stale files after layout changes.
     "dist/opencode/bootstrap.sh",
     "dist/opencode/install-opencode.sh",
     "dist/opencode/uninstall.sh",
 ]
 GENERATED_MARKER_CLEANUP_DIRS = [
+    "plugins/llm-wiki-client-claude/skills",
     "plugins/llm-wiki-client/commands",
     "plugins/llm-wiki-client/skills",
     "plugins/llm-wiki-client/codex/skills",
     "plugins/llm-wiki-client-codex/skills",
+    "plugins/llm-wiki-client-opencode/skills",
     "dist/opencode/.opencode/commands",
     "dist/opencode/.opencode/skills",
 ]
@@ -196,7 +206,7 @@ def generate_manifests(base_values: dict[str, str]) -> None:
     )
     write_rendered_template(
         "platforms/claude/plugin.json.tmpl",
-        "plugins/llm-wiki-client/.claude-plugin/plugin.json",
+        "plugins/llm-wiki-client-claude/.claude-plugin/plugin.json",
         claude,
         validate_json=True,
     )
@@ -222,7 +232,7 @@ def generate_manifests(base_values: dict[str, str]) -> None:
         }
     }
     write_text(
-        ROOT / "plugins/llm-wiki-client/.mcp.json",
+        ROOT / "plugins/llm-wiki-client-claude/.mcp.json",
         json.dumps(mcp_config, ensure_ascii=False, indent=2),
     )
     write_text(
@@ -232,38 +242,31 @@ def generate_manifests(base_values: dict[str, str]) -> None:
 
     write_rendered_template(
         "platforms/opencode/opencode.json.tmpl",
-        "dist/opencode/opencode.json",
+        "plugins/llm-wiki-client-opencode/opencode.json",
         opencode,
         validate_json=True,
     )
     write_rendered_template(
         "platforms/opencode/bootstrap.sh.tmpl",
-        "dist/opencode/bootstrap.sh",
+        "plugins/llm-wiki-client-opencode/bootstrap.sh",
         opencode,
         shell_marker=True,
         executable=True,
     )
     write_rendered_template(
         "platforms/opencode/install-opencode.sh.tmpl",
-        "dist/opencode/install-opencode.sh",
+        "plugins/llm-wiki-client-opencode/install-opencode.sh",
         opencode,
         shell_marker=True,
         executable=True,
     )
     write_rendered_template(
         "platforms/opencode/uninstall.sh.tmpl",
-        "dist/opencode/uninstall.sh",
+        "plugins/llm-wiki-client-opencode/uninstall.sh",
         opencode,
         shell_marker=True,
         executable=True,
     )
-
-
-def generate_commands(values: dict[str, str], output_root: str) -> None:
-    for template_path in sorted((ROOT / "src/commands").glob("*.md.tmpl")):
-        output_name = template_path.name.removesuffix(".tmpl")
-        rendered = render_template(template_path, values)
-        write_text(ROOT / output_root / output_name, with_markdown_marker(rendered))
 
 
 def generate_skills(values: dict[str, str], output_root: str) -> None:
@@ -281,11 +284,9 @@ def main() -> None:
 
     clean_generated_dirs()
     generate_manifests(base_values)
-    generate_commands(claude, "plugins/llm-wiki-client/commands")
-    generate_commands(opencode, "dist/opencode/.opencode/commands")
-    generate_skills(claude, "plugins/llm-wiki-client/skills")
+    generate_skills(claude, "plugins/llm-wiki-client-claude/skills")
     generate_skills(codex, "plugins/llm-wiki-client-codex/skills")
-    generate_skills(opencode, "dist/opencode/.opencode/skills")
+    generate_skills(opencode, "plugins/llm-wiki-client-opencode/skills")
 
 
 if __name__ == "__main__":

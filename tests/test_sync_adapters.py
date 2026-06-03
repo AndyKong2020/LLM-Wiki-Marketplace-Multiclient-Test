@@ -85,8 +85,6 @@ class TemplateInventoryTests(unittest.TestCase):
 
     def test_required_templates_exist(self):
         required = [
-            "src/commands/wiki-cloud-mount.md.tmpl",
-            "src/commands/wiki-cloud-backflow.md.tmpl",
             "src/skills/llm-wiki-cloud-mount/SKILL.md.tmpl",
             "src/skills/llm-wiki-cloud-query/SKILL.md.tmpl",
             "src/skills/llm-wiki-cloud-backflow/SKILL.md.tmpl",
@@ -104,6 +102,17 @@ class TemplateInventoryTests(unittest.TestCase):
                 path = ROOT / rel
                 self.assertTrue(path.exists(), rel)
                 self.assertGreater(path.stat().st_size, 80, rel)
+
+    def test_no_command_source_or_adapter_dirs(self):
+        forbidden = [
+            "src/commands",
+            "plugins/llm-wiki-client-claude/commands",
+            "plugins/llm-wiki-client-codex/commands",
+            "plugins/llm-wiki-client-opencode/commands",
+        ]
+        for rel in forbidden:
+            with self.subTest(rel=rel):
+                self.assertFalse((ROOT / rel).exists(), rel)
 
     def test_skill_templates_have_required_frontmatter_slots(self):
         for rel in [
@@ -129,10 +138,11 @@ class SyncAdaptersTests(unittest.TestCase):
         "platforms",
         "scripts/sync_adapters.py",
         ".claude-plugin",
-        "plugins/llm-wiki-client/.claude-plugin",
-        "plugins/llm-wiki-client/.mcp.json",
-        "plugins/llm-wiki-client/commands",
-        "plugins/llm-wiki-client/skills",
+        "plugins/llm-wiki-client-claude/.claude-plugin",
+        "plugins/llm-wiki-client-claude/.mcp.json",
+        "plugins/llm-wiki-client-claude/skills",
+        "plugins/llm-wiki-client-codex",
+        "plugins/llm-wiki-client-opencode",
     ]
 
     def copy_repo_fixture(self) -> Path:
@@ -171,15 +181,14 @@ class SyncAdaptersTests(unittest.TestCase):
             check=True,
         )
 
-        self.assertTrue((temp_root / "dist/opencode/opencode.json").exists())
-        self.assertFalse((script_root / "dist/opencode/opencode.json").exists())
+        self.assertTrue((temp_root / "plugins/llm-wiki-client-opencode/opencode.json").exists())
+        self.assertFalse((script_root / "plugins/llm-wiki-client-opencode/opencode.json").exists())
 
     def test_run_sync_does_not_create_live_stale_test_paths(self):
         live_test_paths = [
             ROOT / ".agents/unmanaged/sentinel.txt",
-            ROOT / "plugins/llm-wiki-client/commands/stale-generated.md",
-            ROOT / "plugins/llm-wiki-client/commands/stale-user.md",
-            ROOT / "plugins/llm-wiki-client/skills/stale/SKILL.md",
+            ROOT / "plugins/llm-wiki-client-claude/skills/stale-generated/SKILL.md",
+            ROOT / "plugins/llm-wiki-client-claude/skills/stale-user/SKILL.md",
         ]
         live_state = {path: path.read_bytes() if path.is_file() else None for path in live_test_paths}
 
@@ -205,10 +214,12 @@ class SyncAdaptersTests(unittest.TestCase):
 
     def test_sync_removes_stale_generated_marked_files(self):
         temp_root = self.copy_repo_fixture()
-        stale_generated = temp_root / "plugins/llm-wiki-client/commands/stale-generated.md"
-        stale_user = temp_root / "plugins/llm-wiki-client/commands/stale-user.md"
-        stale_generated.write_text(f"{GENERATED_MARKDOWN_MARKER}\n\nold generated command\n", encoding="utf-8")
-        stale_user.write_text("user managed command\n", encoding="utf-8")
+        stale_generated = temp_root / "plugins/llm-wiki-client-claude/skills/stale-generated/SKILL.md"
+        stale_user = temp_root / "plugins/llm-wiki-client-claude/skills/stale-user/SKILL.md"
+        stale_generated.parent.mkdir(parents=True, exist_ok=True)
+        stale_user.parent.mkdir(parents=True, exist_ok=True)
+        stale_generated.write_text(f"{GENERATED_MARKDOWN_MARKER}\n\nold generated skill\n", encoding="utf-8")
+        stale_user.write_text("user managed skill\n", encoding="utf-8")
 
         self.run_sync(temp_root)
 
@@ -217,7 +228,7 @@ class SyncAdaptersTests(unittest.TestCase):
 
     def test_sync_removes_stale_generated_skill_files(self):
         temp_root = self.copy_repo_fixture()
-        stale_skill = temp_root / "plugins/llm-wiki-client/skills/stale/SKILL.md"
+        stale_skill = temp_root / "plugins/llm-wiki-client-claude/skills/stale/SKILL.md"
         stale_skill.parent.mkdir(parents=True, exist_ok=True)
         stale_skill.write_text(f"{GENERATED_MARKDOWN_MARKER}\n\nold generated skill\n", encoding="utf-8")
 
@@ -230,27 +241,23 @@ class SyncAdaptersTests(unittest.TestCase):
         required = [
             ".claude-plugin/marketplace.json",
             ".agents/plugins/marketplace.json",
-            "plugins/llm-wiki-client/.claude-plugin/plugin.json",
-            "plugins/llm-wiki-client/.mcp.json",
+            "plugins/llm-wiki-client-claude/.claude-plugin/plugin.json",
+            "plugins/llm-wiki-client-claude/.mcp.json",
             "plugins/llm-wiki-client-codex/.codex-plugin/plugin.json",
             "plugins/llm-wiki-client-codex/.mcp.json",
-            "plugins/llm-wiki-client/commands/wiki-cloud-mount.md",
-            "plugins/llm-wiki-client/commands/wiki-cloud-backflow.md",
-            "plugins/llm-wiki-client/skills/llm-wiki-cloud-mount/SKILL.md",
-            "plugins/llm-wiki-client/skills/llm-wiki-cloud-query/SKILL.md",
-            "plugins/llm-wiki-client/skills/llm-wiki-cloud-backflow/SKILL.md",
+            "plugins/llm-wiki-client-claude/skills/llm-wiki-cloud-mount/SKILL.md",
+            "plugins/llm-wiki-client-claude/skills/llm-wiki-cloud-query/SKILL.md",
+            "plugins/llm-wiki-client-claude/skills/llm-wiki-cloud-backflow/SKILL.md",
             "plugins/llm-wiki-client-codex/skills/llm-wiki-cloud-mount/SKILL.md",
             "plugins/llm-wiki-client-codex/skills/llm-wiki-cloud-query/SKILL.md",
             "plugins/llm-wiki-client-codex/skills/llm-wiki-cloud-backflow/SKILL.md",
-            "dist/opencode/opencode.json",
-            "dist/opencode/bootstrap.sh",
-            "dist/opencode/install-opencode.sh",
-            "dist/opencode/uninstall.sh",
-            "dist/opencode/.opencode/commands/wiki-cloud-mount.md",
-            "dist/opencode/.opencode/commands/wiki-cloud-backflow.md",
-            "dist/opencode/.opencode/skills/llm-wiki-cloud-mount/SKILL.md",
-            "dist/opencode/.opencode/skills/llm-wiki-cloud-query/SKILL.md",
-            "dist/opencode/.opencode/skills/llm-wiki-cloud-backflow/SKILL.md",
+            "plugins/llm-wiki-client-opencode/opencode.json",
+            "plugins/llm-wiki-client-opencode/bootstrap.sh",
+            "plugins/llm-wiki-client-opencode/install-opencode.sh",
+            "plugins/llm-wiki-client-opencode/uninstall.sh",
+            "plugins/llm-wiki-client-opencode/skills/llm-wiki-cloud-mount/SKILL.md",
+            "plugins/llm-wiki-client-opencode/skills/llm-wiki-cloud-query/SKILL.md",
+            "plugins/llm-wiki-client-opencode/skills/llm-wiki-cloud-backflow/SKILL.md",
         ]
         for rel in required:
             with self.subTest(rel=rel):
@@ -259,9 +266,9 @@ class SyncAdaptersTests(unittest.TestCase):
     def test_sync_replaces_all_template_variables(self):
         temp_root = self.run_sync()
         generated = [
-            "plugins/llm-wiki-client/skills/llm-wiki-cloud-mount/SKILL.md",
+            "plugins/llm-wiki-client-claude/skills/llm-wiki-cloud-mount/SKILL.md",
             "plugins/llm-wiki-client-codex/skills/llm-wiki-cloud-mount/SKILL.md",
-            "dist/opencode/.opencode/skills/llm-wiki-cloud-mount/SKILL.md",
+            "plugins/llm-wiki-client-opencode/skills/llm-wiki-cloud-mount/SKILL.md",
         ]
         for rel in generated:
             path = temp_root / rel
@@ -274,11 +281,11 @@ class SyncAdaptersTests(unittest.TestCase):
 
     def test_sync_generates_platform_specific_instruction_targets(self):
         temp_root = self.run_sync()
-        claude_mount = (temp_root / "plugins/llm-wiki-client/skills/llm-wiki-cloud-mount/SKILL.md").read_text(encoding="utf-8")
+        claude_mount = (temp_root / "plugins/llm-wiki-client-claude/skills/llm-wiki-cloud-mount/SKILL.md").read_text(encoding="utf-8")
         codex_mount_path = temp_root / "plugins/llm-wiki-client-codex/skills/llm-wiki-cloud-mount/SKILL.md"
         self.assertTrue(codex_mount_path.exists())
         codex_mount = codex_mount_path.read_text(encoding="utf-8")
-        opencode_mount = (temp_root / "dist/opencode/.opencode/skills/llm-wiki-cloud-mount/SKILL.md").read_text(encoding="utf-8")
+        opencode_mount = (temp_root / "plugins/llm-wiki-client-opencode/skills/llm-wiki-cloud-mount/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("CLAUDE.md", claude_mount)
         self.assertIn("AGENTS.md", codex_mount)
         self.assertIn("AGENTS.md", opencode_mount)
@@ -308,11 +315,11 @@ class SyncAdaptersTests(unittest.TestCase):
         for rel in [
             ".claude-plugin/marketplace.json",
             ".agents/plugins/marketplace.json",
-            "plugins/llm-wiki-client/.claude-plugin/plugin.json",
-            "plugins/llm-wiki-client/.mcp.json",
+            "plugins/llm-wiki-client-claude/.claude-plugin/plugin.json",
+            "plugins/llm-wiki-client-claude/.mcp.json",
             "plugins/llm-wiki-client-codex/.codex-plugin/plugin.json",
             "plugins/llm-wiki-client-codex/.mcp.json",
-            "dist/opencode/opencode.json",
+            "plugins/llm-wiki-client-opencode/opencode.json",
         ]:
             with self.subTest(rel=rel):
                 json.loads((temp_root / rel).read_text(encoding="utf-8"))
@@ -320,10 +327,9 @@ class SyncAdaptersTests(unittest.TestCase):
     def test_sync_preserves_markdown_frontmatter(self):
         temp_root = self.run_sync()
         for rel in [
-            "plugins/llm-wiki-client/commands/wiki-cloud-mount.md",
-            "plugins/llm-wiki-client/skills/llm-wiki-cloud-mount/SKILL.md",
-            "dist/opencode/.opencode/commands/wiki-cloud-mount.md",
-            "dist/opencode/.opencode/skills/llm-wiki-cloud-mount/SKILL.md",
+            "plugins/llm-wiki-client-claude/skills/llm-wiki-cloud-mount/SKILL.md",
+            "plugins/llm-wiki-client-codex/skills/llm-wiki-cloud-mount/SKILL.md",
+            "plugins/llm-wiki-client-opencode/skills/llm-wiki-cloud-mount/SKILL.md",
         ]:
             text = (temp_root / rel).read_text(encoding="utf-8")
             with self.subTest(rel=rel):

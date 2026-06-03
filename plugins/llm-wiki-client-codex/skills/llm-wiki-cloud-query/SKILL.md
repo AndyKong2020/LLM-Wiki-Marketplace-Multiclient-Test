@@ -12,7 +12,7 @@ version: 1.1.6
 
 ## 1. 触发查询的场景
 
-本 skill 是真实任务运行时的 wiki 入口。AGENTS.md 中由 `/wiki-cloud-mount` 写入的 LLM-WIKI pin block 已经列出"哪些任务阶段必须查 wiki"，不要在临时判断中绕开它。
+本 skill 是真实任务运行时的 wiki 入口。AGENTS.md 中由 `llm-wiki-cloud-mount` 写入的 LLM-WIKI pin block 已经列出"哪些任务阶段必须查 wiki"，不要在临时判断中绕开它。
 
 下列任一情况发生时必须查 wiki：
 

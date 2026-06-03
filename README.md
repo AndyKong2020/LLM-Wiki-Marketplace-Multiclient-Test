@@ -48,15 +48,15 @@ tmpdir="$(mktemp -d)"
 在 Claude Code 里模拟使用：
 
 ```text
-/llm-wiki-client:wiki-cloud-mount
+请执行 llm-wiki-cloud-mount，挂载当前项目的 CANN-Infer-Wiki。
 请用 CANN-Infer-Wiki 查询 AscendC tiling 优化的注意事项，回答 3 条要点。
-/llm-wiki-client:wiki-cloud-backflow
+请执行 llm-wiki-cloud-backflow，为这次测试创建本地任务归档，不上传。
 ```
 
-在需要挂载知识库的项目中运行 `/llm-wiki-client:wiki-cloud-mount`。它会探活远程
+在需要挂载知识库的项目中触发 `llm-wiki-cloud-mount` skill。它会探活远程
 MCP，并向 `CLAUDE.md` 写入 wiki 使用提示。正常使用 Claude Code；任务进入
 LLM/NPU 推理优化相关阶段时，`llm-wiki-cloud-query` skill 通过 MCP tools 查询
-wiki。任务结束后可运行 `/llm-wiki-client:wiki-cloud-backflow` 创建本地任务归档；
+wiki。任务结束后可触发 `llm-wiki-cloud-backflow` 创建本地任务归档；
 若用户确认且配置了 `LLM_WIKI_UPLOAD_TOKEN`，插件会通过私有 HTTP backflow 入口上传归档。
 
 ### Codex
@@ -103,20 +103,20 @@ codex
 安装或更新：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test/main/dist/opencode/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test/main/plugins/llm-wiki-client-opencode/bootstrap.sh | bash
 ```
 
 卸载：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test/main/dist/opencode/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test/main/plugins/llm-wiki-client-opencode/uninstall.sh | bash
 ```
 
 隔离测试安装：
 
 ```bash
 tmpdir="$(mktemp -d)"
-curl -fsSL https://raw.githubusercontent.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test/main/dist/opencode/bootstrap.sh | bash -s -- --prefix "$tmpdir/opencode"
+curl -fsSL https://raw.githubusercontent.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test/main/plugins/llm-wiki-client-opencode/bootstrap.sh | bash -s -- --prefix "$tmpdir/opencode"
 ```
 
 启动隔离 OpenCode 会话：
@@ -135,14 +135,14 @@ opencode
 在 OpenCode 里模拟使用：
 
 ```text
-/wiki-cloud-mount
+请执行 llm-wiki-cloud-mount，挂载当前项目的 CANN-Infer-Wiki。
 请用 CANN-Infer-Wiki 查询 AscendC tiling 优化的注意事项，回答 3 条要点。
-/wiki-cloud-backflow
+请执行 llm-wiki-cloud-backflow，为这次测试创建本地任务归档，不上传。
 ```
 
 OpenCode installer 默认写入全局 `~/.config/opencode`；重新运行同一条 `curl | bash`
-即可覆盖 command、skill，并合并更新 MCP config。`--prefix` 只用于隔离测试。
-卸载脚本只移除本插件的 command、skill 和 MCP entry，不删除用户其他 OpenCode 配置。
+即可覆盖 skill，并合并更新 MCP config。`--prefix` 只用于隔离测试。
+卸载脚本只移除本插件的 skill 和 MCP entry，不删除用户其他 OpenCode 配置。
 
 ### 隔离测试仓库
 
@@ -174,8 +174,9 @@ Token 由 operator 通过仓库外渠道分发。不要提交 token，不要把 
 ## Generated Adapter 维护
 
 `src/` 和 `platforms/` 是可编辑源头。`scripts/sync_adapters.py` 会生成 Claude Code、
-Codex 和 OpenCode adapter，包括 `plugins/llm-wiki-client/`、`plugins/llm-wiki-client-codex/`、
-`.claude-plugin/marketplace.json`、`.agents/plugins/marketplace.json` 和 `dist/opencode/`。维护生成产物时不要直接手改带有
+Codex 和 OpenCode adapter，包括 `plugins/llm-wiki-client-claude/`、
+`plugins/llm-wiki-client-codex/`、`plugins/llm-wiki-client-opencode/`、
+`.claude-plugin/marketplace.json` 和 `.agents/plugins/marketplace.json`。维护生成产物时不要直接手改带有
 generated marker 的文件；应修改源模板后运行：
 
 ```bash
@@ -191,13 +192,9 @@ python3 scripts/validate_release.py
 ```text
 .claude-plugin/marketplace.json
 .agents/plugins/marketplace.json
-plugins/llm-wiki-client/
+plugins/llm-wiki-client-claude/
   .claude-plugin/plugin.json
   .mcp.json
-  README.md
-  commands/
-    wiki-cloud-mount.md
-    wiki-cloud-backflow.md
   skills/
     llm-wiki-cloud-mount/SKILL.md
     llm-wiki-cloud-query/SKILL.md
@@ -209,12 +206,13 @@ plugins/llm-wiki-client-codex/
     llm-wiki-cloud-mount/SKILL.md
     llm-wiki-cloud-query/SKILL.md
     llm-wiki-cloud-backflow/SKILL.md
-dist/opencode/
+plugins/llm-wiki-client-opencode/
   bootstrap.sh
   install-opencode.sh
   uninstall.sh
   opencode.json
-  .opencode/
-    commands/
-    skills/
+  skills/
+    llm-wiki-cloud-mount/SKILL.md
+    llm-wiki-cloud-query/SKILL.md
+    llm-wiki-cloud-backflow/SKILL.md
 ```

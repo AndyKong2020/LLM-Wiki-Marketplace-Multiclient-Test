@@ -7,8 +7,8 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-INSTALLER = ROOT / "dist/opencode/install-opencode.sh"
-UNINSTALLER = ROOT / "dist/opencode/uninstall.sh"
+INSTALLER = ROOT / "plugins/llm-wiki-client-opencode/install-opencode.sh"
+UNINSTALLER = ROOT / "plugins/llm-wiki-client-opencode/uninstall.sh"
 MCP_SERVER_NAME = "cann-infer-wiki-cloud"
 MCP_URL = "https://wiki.andykong.top/mcp"
 
@@ -67,10 +67,8 @@ class OpenCodeInstallerTests(unittest.TestCase):
 
             self.assertEqual(
                 {child.name for child in prefix.iterdir()},
-                {"commands", "skills", "opencode.json"},
+                {"skills", "opencode.json"},
             )
-            self.assertTrue((prefix / "commands/wiki-cloud-mount.md").is_file())
-            self.assertTrue((prefix / "commands/wiki-cloud-backflow.md").is_file())
             self.assertTrue((prefix / "skills/llm-wiki-cloud-query/SKILL.md").is_file())
             self.assertTrue((prefix / "opencode.json").is_file())
             self.assert_env_config_paths_untouched(
@@ -155,8 +153,6 @@ class OpenCodeInstallerTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-            self.assertFalse((prefix / "commands/wiki-cloud-mount.md").exists())
-            self.assertFalse((prefix / "commands/wiki-cloud-backflow.md").exists())
             self.assertFalse((prefix / "skills/llm-wiki-cloud-mount").exists())
             self.assertFalse((prefix / "skills/llm-wiki-cloud-query").exists())
             self.assertFalse((prefix / "skills/llm-wiki-cloud-backflow").exists())

@@ -13,8 +13,8 @@
       "author": {
         "name": "AndyKong"
       },
-      "source": "./plugins/llm-wiki-client",
-      "homepage": "https://github.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test/tree/main/plugins/llm-wiki-client",
+      "source": "./plugins/llm-wiki-client-claude",
+      "homepage": "https://github.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test/tree/main/plugins/llm-wiki-client-claude",
       "repository": "https://github.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test",
       "category": "development",
       "keywords": [

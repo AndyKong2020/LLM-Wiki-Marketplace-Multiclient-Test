@@ -83,7 +83,7 @@ class ValidateReleaseTests(unittest.TestCase):
     def test_validate_release_rejects_manual_generated_file_edit(self):
         with temp_repo() as repo:
             run_sync(repo)
-            generated = repo / "plugins/llm-wiki-client/skills/llm-wiki-cloud-query/SKILL.md"
+            generated = repo / "plugins/llm-wiki-client-claude/skills/llm-wiki-cloud-query/SKILL.md"
             original = generated.read_text(encoding="utf-8")
             generated.write_text(original + "\n<!-- stale generated validator probe -->\n", encoding="utf-8")
             result = run_validate(repo)
@@ -95,7 +95,7 @@ class ValidateReleaseTests(unittest.TestCase):
     def test_validate_release_rejects_untracked_generated_extra_file(self):
         with temp_repo() as repo:
             run_sync(repo)
-            extra = repo / "plugins/llm-wiki-client/untracked-extra.txt"
+            extra = repo / "plugins/llm-wiki-client-claude/untracked-extra.txt"
             extra.write_text("test-only untracked generated file\n", encoding="utf-8")
 
             result = run_validate(repo)
@@ -148,9 +148,9 @@ class ValidateReleaseTests(unittest.TestCase):
         with temp_repo() as repo:
             source_path = "src/skills/llm-wiki-cloud-query/SKILL.md.tmpl"
             generated_paths = [
-                "plugins/llm-wiki-client/skills/llm-wiki-cloud-query/SKILL.md",
+                "plugins/llm-wiki-client-claude/skills/llm-wiki-cloud-query/SKILL.md",
                 "plugins/llm-wiki-client-codex/skills/llm-wiki-cloud-query/SKILL.md",
-                "dist/opencode/.opencode/skills/llm-wiki-cloud-query/SKILL.md",
+                "plugins/llm-wiki-client-opencode/skills/llm-wiki-cloud-query/SKILL.md",
             ]
 
             source = repo / source_path
@@ -241,8 +241,8 @@ class DocumentationTests(unittest.TestCase):
             "CLAUDE_CONFIG_DIR",
             "CODEX_HOME",
             "OPENCODE_CONFIG_DIR",
-            "/llm-wiki-client:wiki-cloud-mount",
-            "/llm-wiki-client:wiki-cloud-backflow",
+            "llm-wiki-cloud-mount",
+            "llm-wiki-cloud-backflow",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, text)
@@ -250,29 +250,9 @@ class DocumentationTests(unittest.TestCase):
         self.assertNotIn("LLM-Wiki-Marketplace-Cloud", text)
         self.assertNotIn("python3 scripts/test_isolated_clients.py", text)
         self.assertNotIn("codex plugin marketplace upgrade\n", text)
-        self.assertNotIn("/llm-wiki-client:llm-wiki-cloud-mount", text)
-
-    def test_plugin_readme_mentions_generated_adapters(self):
-        text = (ROOT / "plugins/llm-wiki-client/README.md").read_text(encoding="utf-8")
-        for phrase in [
-            "/llm-wiki-client:wiki-cloud-mount",
-            "/llm-wiki-client:wiki-cloud-backflow",
-            "scripts/sync_adapters.py",
-            "python3 scripts/validate_release.py",
-            ".claude-plugin/plugin.json",
-            ".codex-plugin/plugin.json",
-            ".mcp.json",
-            "plugins/llm-wiki-client-codex",
-            "dist/opencode",
-            "src/",
-            "platforms/",
-            "本 README 是维护文档",
-            "不要手工编辑 generated adapter",
-            "root README",
-            "tests",
-        ]:
-            with self.subTest(phrase=phrase):
-                self.assertIn(phrase, text)
+        self.assertNotIn("/llm-wiki-client:", text)
+        self.assertNotIn("/wiki-cloud-mount", text)
+        self.assertNotIn("/wiki-cloud-backflow", text)
 
 
 if __name__ == "__main__":

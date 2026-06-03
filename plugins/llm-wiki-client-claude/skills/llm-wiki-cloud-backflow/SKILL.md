@@ -13,9 +13,9 @@ version: 1.1.6
 本 skill 包含 **轨迹归档** 和 **轨迹上传** 具体操作。MCP 查询仍是匿名读取；backflow 上传走私有 token-gated HTTP 入口。
 
 ```text
-/wiki-cloud-backflow
+llm-wiki-cloud-backflow
     |
-    +--> 1. 轨迹归档：把本次任务整理成本地目录 .claude/llm-wiki/backflow/<task-slug>/
+    +--> 1. 轨迹归档：把本次任务整理成本地目录 .llm-wiki/backflow/<task-slug>/
     |     （顶层 <task-slug>.md + workspace/ 等附件）
     |
     +--> 2. 轨迹上传：归档汇报后经用户确认，如配置 LLM_WIKI_UPLOAD_TOKEN，
@@ -40,7 +40,7 @@ version: 1.1.6
 - 否则从当前 `progress.md` 标题、当前 git branch、最近用户任务描述、workspace 目录名中推断一个短 slug。
 - slug 必须使用小写 ASCII、数字和短横线；非字母数字统一转成 `-`。
 - 如果多个 slug 都合理但会影响后续可读性或上传目录辨识度，先问用户确认。
-- 如果本地已存在同名 `.claude/llm-wiki/backflow/<task-slug>/`，给 slug 追加短后缀用作区分。
+- 如果本地已存在同名 `.llm-wiki/backflow/<task-slug>/`，给 slug 追加短后缀用作区分。
 
 workspace 判断：
 
@@ -67,7 +67,7 @@ workspace 判断：
 - 构建产物、依赖目录、缓存目录、虚拟环境
 - 大体积二进制文件
 - credentials、tokens、keys、`.env*`
-- `.git/`、`.idea/`、`.vscode/`、`.claude/llm-wiki/backflow/`（避免递归归档）
+- `.git/`、`.idea/`、`.vscode/`、`.llm-wiki/backflow/`（避免递归归档）
 - 若有 `.agents-log`，默认不上传 `meta/` 目录
 
 如果被排除的材料有证据价值，在 `<task-slug>.md` 的 `Notes` 中写清原路径、原因、摘要和可访问位置；不要把大文件硬塞进上传。
@@ -84,7 +84,7 @@ workspace 判断：
 推荐落盘形态：
 
 ```text
-.claude/llm-wiki/backflow/<task-slug>/
+.llm-wiki/backflow/<task-slug>/
 └── workspace/
     └── agents-log/
         └── summary/
@@ -103,7 +103,7 @@ workspace 判断：
 本地归档目录固定为：
 
 ```text
-.claude/llm-wiki/backflow/<task-slug>/
+.llm-wiki/backflow/<task-slug>/
 ```
 
 **这个目录的内容就是后续 tar.gz 上传包的根目录**——顶层必有且只能有一个 `.md` 文件（通常是 `<task-slug>.md`），其余文件可以任意命名、任意多级嵌套。
@@ -111,7 +111,7 @@ workspace 判断：
 归档目录至少包含：
 
 ```text
-.claude/llm-wiki/backflow/<task-slug>/
+.llm-wiki/backflow/<task-slug>/
 ├── <task-slug>.md               # 顶层总览（标题/摘要/目录/Notes）
 └── workspace/              # 任务现场材料
     ├── progress.md         # 如有
@@ -189,14 +189,14 @@ backflow/<task-slug>/
 
 轨迹归档完成后，向用户汇报：
 
-- 本地 archive 路径 `.claude/llm-wiki/backflow/<task-slug>/`
+- 本地 archive 路径 `.llm-wiki/backflow/<task-slug>/`
 - 顶层 `<task-slug>.md` 一句话总结 + 文件大小（不复制全文）
 - 整个目录的文件清单（`find . -type f` 输出）+ 文件总数 + 总字节
 - 纳入了哪些 `.agents-log/summary/<timestamp>/`；如果没有找到相关 summary，明确说明已跳过
 - 排除了哪些重要文件以及原因
 - 即将作为上传 `slug` 的值
 
-轨迹上传只在归档汇报完成并得到用户确认后执行。无论上传是否成功，**不要删除**本地 `.claude/llm-wiki/backflow/<task-slug>/` archive。
+轨迹上传只在归档汇报完成并得到用户确认后执行。无论上传是否成功，**不要删除**本地 `.llm-wiki/backflow/<task-slug>/` archive。
 
 ## 2. 轨迹上传
 
@@ -230,7 +230,7 @@ token 由 operator 通过仓库外渠道发放。不要打印 token，不要把 
 
 ### 2.2 打包 tar.gz
 
-如果 token 存在，先校验 `task_slug` 和 archive root，再把 `.claude/llm-wiki/backflow/<task-slug>/` 打成临时 tar.gz。压缩包固定写到 `/tmp/llm-wiki-backflow-upload/<task-slug>.tar.gz`，并且打包内容必须是 archive root 的内容，而不是外层目录本身。
+如果 token 存在，先校验 `task_slug` 和 archive root，再把 `.llm-wiki/backflow/<task-slug>/` 打成临时 tar.gz。压缩包固定写到 `/tmp/llm-wiki-backflow-upload/<task-slug>.tar.gz`，并且打包内容必须是 archive root 的内容，而不是外层目录本身。
 
 ```bash
 task_slug="<task-slug>"
@@ -240,7 +240,7 @@ if ! printf '%s\n' "$task_slug" | grep -Eq '^[a-z0-9][a-z0-9-]*$'; then
   exit 1
 fi
 
-archive_root=".claude/llm-wiki/backflow/${task_slug}"
+archive_root=".llm-wiki/backflow/${task_slug}"
 if [ ! -d "$archive_root" ]; then
   echo "archive root is not a directory: ${archive_root}"
   exit 1

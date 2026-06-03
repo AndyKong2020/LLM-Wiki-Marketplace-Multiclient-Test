@@ -30,8 +30,6 @@ if [ "$dry_run" = "1" ]; then
   exit 0
 fi
 
-rm -f "${prefix}/commands/wiki-cloud-mount.md"
-rm -f "${prefix}/commands/wiki-cloud-backflow.md"
 rm -rf "${prefix}/skills/llm-wiki-cloud-mount"
 rm -rf "${prefix}/skills/llm-wiki-cloud-query"
 rm -rf "${prefix}/skills/llm-wiki-cloud-backflow"

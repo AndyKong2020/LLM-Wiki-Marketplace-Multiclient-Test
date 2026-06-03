@@ -264,11 +264,9 @@ def check_mock_upload(upload_url: str) -> None:
 
 def check_opencode_install(env: dict[str, str], root: Path) -> None:
     prefix = root / "opencode-prefix"
-    run(["bash", "dist/opencode/install-opencode.sh", "--prefix", str(prefix)], env=env)
+    run(["bash", "plugins/llm-wiki-client-opencode/install-opencode.sh", "--prefix", str(prefix)], env=env)
 
     required = [
-        prefix / "commands/wiki-cloud-mount.md",
-        prefix / "commands/wiki-cloud-backflow.md",
         prefix / "skills/llm-wiki-cloud-mount/SKILL.md",
         prefix / "skills/llm-wiki-cloud-query/SKILL.md",
         prefix / "skills/llm-wiki-cloud-backflow/SKILL.md",

@@ -31,9 +31,8 @@ if [ "$dry_run" = "1" ]; then
   exit 0
 fi
 
-mkdir -p "${prefix}/commands" "${prefix}/skills"
-cp -R "${source_root}/.opencode/commands/." "${prefix}/commands/"
-cp -R "${source_root}/.opencode/skills/." "${prefix}/skills/"
+mkdir -p "${prefix}/skills"
+cp -R "${source_root}/skills/." "${prefix}/skills/"
 
 python3 - "$prefix" "${source_root}/opencode.json" <<'PY'
 import json

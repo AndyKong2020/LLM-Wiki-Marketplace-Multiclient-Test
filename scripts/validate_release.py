@@ -25,25 +25,25 @@ README_MARKETPLACE_ADD_COMMAND = (
 JSON_FILES = [
     ".claude-plugin/marketplace.json",
     ".agents/plugins/marketplace.json",
-    "plugins/llm-wiki-client/.claude-plugin/plugin.json",
-    "plugins/llm-wiki-client/.mcp.json",
+    "plugins/llm-wiki-client-claude/.claude-plugin/plugin.json",
+    "plugins/llm-wiki-client-claude/.mcp.json",
     "plugins/llm-wiki-client-codex/.codex-plugin/plugin.json",
     "plugins/llm-wiki-client-codex/.mcp.json",
-    "dist/opencode/opencode.json",
+    "plugins/llm-wiki-client-opencode/opencode.json",
 ]
 GENERATED_SCAN_ROOTS = [
     ".claude-plugin",
     ".agents",
-    "plugins/llm-wiki-client",
+    "plugins/llm-wiki-client-claude",
     "plugins/llm-wiki-client-codex",
-    "dist/opencode",
+    "plugins/llm-wiki-client-opencode",
 ]
 GENERATED_DIFF_PATHS = [
     ".claude-plugin",
     ".agents",
-    "plugins/llm-wiki-client",
+    "plugins/llm-wiki-client-claude",
     "plugins/llm-wiki-client-codex",
-    "dist/opencode",
+    "plugins/llm-wiki-client-opencode",
 ]
 TEMP_COPY_IGNORE = shutil.ignore_patterns(
     ".git",
@@ -55,20 +55,15 @@ TEMP_COPY_IGNORE = shutil.ignore_patterns(
     ".ruff_cache",
 )
 SKILL_ROOTS = [
-    "plugins/llm-wiki-client/skills",
+    "plugins/llm-wiki-client-claude/skills",
     "plugins/llm-wiki-client-codex/skills",
-    "dist/opencode/.opencode/skills",
+    "plugins/llm-wiki-client-opencode/skills",
 ]
 MOUNT_SKILLS = [
-    "plugins/llm-wiki-client/skills/llm-wiki-cloud-mount/SKILL.md",
+    "plugins/llm-wiki-client-claude/skills/llm-wiki-cloud-mount/SKILL.md",
     "plugins/llm-wiki-client-codex/skills/llm-wiki-cloud-mount/SKILL.md",
-    "dist/opencode/.opencode/skills/llm-wiki-cloud-mount/SKILL.md",
+    "plugins/llm-wiki-client-opencode/skills/llm-wiki-cloud-mount/SKILL.md",
 ]
-COMMAND_DIRS = [
-    "plugins/llm-wiki-client/commands",
-    "dist/opencode/.opencode/commands",
-]
-EXPECTED_COMMANDS = {"wiki-cloud-mount.md", "wiki-cloud-backflow.md"}
 SKIP_TOKEN_PARTS = {".git", ".idea"}
 SKIP_TOKEN_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".bmp", ".tiff"}
 
@@ -178,7 +173,7 @@ def get_readme_command_names(json_data: dict[str, Any]) -> tuple[str, str]:
         plugin_names.add(plugin_name)
 
     for relative_path in [
-        "plugins/llm-wiki-client/.claude-plugin/plugin.json",
+        "plugins/llm-wiki-client-claude/.claude-plugin/plugin.json",
         "plugins/llm-wiki-client-codex/.codex-plugin/plugin.json",
     ]:
         manifest = require_dict(json_data[relative_path], relative_path)
@@ -223,9 +218,9 @@ def check_versions(version: str, json_data: dict[str, Any]) -> None:
         ".claude-plugin/marketplace.json": get_plugin_version_from_claude_marketplace(
             json_data[".claude-plugin/marketplace.json"]
         ),
-        "plugins/llm-wiki-client/.claude-plugin/plugin.json": get_manifest_version(
-            json_data["plugins/llm-wiki-client/.claude-plugin/plugin.json"],
-            "plugins/llm-wiki-client/.claude-plugin/plugin.json",
+        "plugins/llm-wiki-client-claude/.claude-plugin/plugin.json": get_manifest_version(
+            json_data["plugins/llm-wiki-client-claude/.claude-plugin/plugin.json"],
+            "plugins/llm-wiki-client-claude/.claude-plugin/plugin.json",
         ),
         "plugins/llm-wiki-client-codex/.codex-plugin/plugin.json": get_manifest_version(
             json_data["plugins/llm-wiki-client-codex/.codex-plugin/plugin.json"],
@@ -280,13 +275,13 @@ def check_readme_install_commands(json_data: dict[str, Any]) -> None:
 
 
 def check_canonical_mcp_url(json_data: dict[str, Any]) -> None:
-    mcp_config = json.dumps(json_data["plugins/llm-wiki-client/.mcp.json"], ensure_ascii=False)
+    mcp_config = json.dumps(json_data["plugins/llm-wiki-client-claude/.mcp.json"], ensure_ascii=False)
     if CANONICAL_MCP_URL not in mcp_config:
-        fail("canonical mcp url missing in plugins/llm-wiki-client/.mcp.json")
+        fail("canonical mcp url missing in plugins/llm-wiki-client-claude/.mcp.json")
 
-    opencode_config = json.dumps(json_data["dist/opencode/opencode.json"], ensure_ascii=False)
+    opencode_config = json.dumps(json_data["plugins/llm-wiki-client-opencode/opencode.json"], ensure_ascii=False)
     if CANONICAL_MCP_URL not in opencode_config:
-        fail("canonical mcp url missing in dist/opencode/opencode.json")
+        fail("canonical mcp url missing in plugins/llm-wiki-client-opencode/opencode.json")
 
     for mount_skill in MOUNT_SKILLS:
         if CANONICAL_MCP_URL not in read_text(mount_skill):
@@ -294,9 +289,9 @@ def check_canonical_mcp_url(json_data: dict[str, Any]) -> None:
 
 
 def check_opencode_skill_names() -> None:
-    root = ROOT / "dist/opencode/.opencode/skills"
+    root = ROOT / "plugins/llm-wiki-client-opencode/skills"
     if not root.is_dir():
-        fail("missing OpenCode skill root: dist/opencode/.opencode/skills")
+        fail("missing OpenCode skill root: plugins/llm-wiki-client-opencode/skills")
     for skill_dir in sorted(path for path in root.iterdir() if path.is_dir()):
         if not OPENCODE_SKILL_NAME_RE.fullmatch(skill_dir.name):
             fail(f"invalid OpenCode skill directory name: {skill_dir.name}")
@@ -310,14 +305,13 @@ def check_opencode_skill_names() -> None:
             fail(f"invalid OpenCode skill name: {name}")
 
 
-def check_command_directories() -> None:
-    for command_dir in COMMAND_DIRS:
-        root = ROOT / command_dir
-        if not root.is_dir():
-            fail(f"missing command directory: {command_dir}")
-        actual = {path.name for path in root.iterdir()}
-        if actual != EXPECTED_COMMANDS:
-            fail(f"unexpected commands in {command_dir}: {sorted(actual)}")
+def check_no_command_directories() -> None:
+    for scan_root in GENERATED_SCAN_ROOTS:
+        root = ROOT / scan_root
+        if not root.exists():
+            continue
+        for path in sorted(candidate for candidate in root.rglob("commands") if candidate.is_dir()):
+            fail(f"unexpected command directory: {rel(path)}")
 
 
 def check_no_unrendered_templates() -> None:
@@ -461,7 +455,7 @@ def validate() -> None:
     check_readme_install_commands(json_data)
     check_canonical_mcp_url(json_data)
     check_opencode_skill_names()
-    check_command_directories()
+    check_no_command_directories()
     check_no_unrendered_templates()
     check_no_token_like_strings()
     check_generated_files_current()

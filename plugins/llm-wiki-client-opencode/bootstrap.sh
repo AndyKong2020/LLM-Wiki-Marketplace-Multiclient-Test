@@ -12,4 +12,4 @@ cleanup() {
 trap cleanup EXIT
 
 git clone --depth 1 --branch "${ref}" "${repo}" "${workdir}"
-bash "${workdir}/dist/opencode/install-opencode.sh" "$@"
+bash "${workdir}/plugins/llm-wiki-client-opencode/install-opencode.sh" "$@"
