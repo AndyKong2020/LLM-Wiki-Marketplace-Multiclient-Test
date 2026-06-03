@@ -26,20 +26,23 @@ JSON_FILES = [
     ".claude-plugin/marketplace.json",
     ".agents/plugins/marketplace.json",
     "plugins/llm-wiki-client/.claude-plugin/plugin.json",
-    "plugins/llm-wiki-client/.codex-plugin/plugin.json",
     "plugins/llm-wiki-client/.mcp.json",
+    "plugins/llm-wiki-client-codex/.codex-plugin/plugin.json",
+    "plugins/llm-wiki-client-codex/.mcp.json",
     "dist/opencode/opencode.json",
 ]
 GENERATED_SCAN_ROOTS = [
     ".claude-plugin",
     ".agents",
     "plugins/llm-wiki-client",
+    "plugins/llm-wiki-client-codex",
     "dist/opencode",
 ]
 GENERATED_DIFF_PATHS = [
     ".claude-plugin",
     ".agents",
     "plugins/llm-wiki-client",
+    "plugins/llm-wiki-client-codex",
     "dist/opencode",
 ]
 TEMP_COPY_IGNORE = shutil.ignore_patterns(
@@ -53,12 +56,12 @@ TEMP_COPY_IGNORE = shutil.ignore_patterns(
 )
 SKILL_ROOTS = [
     "plugins/llm-wiki-client/skills",
-    "plugins/llm-wiki-client/codex/skills",
+    "plugins/llm-wiki-client-codex/skills",
     "dist/opencode/.opencode/skills",
 ]
 MOUNT_SKILLS = [
     "plugins/llm-wiki-client/skills/llm-wiki-cloud-mount/SKILL.md",
-    "plugins/llm-wiki-client/codex/skills/llm-wiki-cloud-mount/SKILL.md",
+    "plugins/llm-wiki-client-codex/skills/llm-wiki-cloud-mount/SKILL.md",
     "dist/opencode/.opencode/skills/llm-wiki-cloud-mount/SKILL.md",
 ]
 COMMAND_DIRS = [
@@ -176,7 +179,7 @@ def get_readme_command_names(json_data: dict[str, Any]) -> tuple[str, str]:
 
     for relative_path in [
         "plugins/llm-wiki-client/.claude-plugin/plugin.json",
-        "plugins/llm-wiki-client/.codex-plugin/plugin.json",
+        "plugins/llm-wiki-client-codex/.codex-plugin/plugin.json",
     ]:
         manifest = require_dict(json_data[relative_path], relative_path)
         plugin_names.add(get_name(manifest, relative_path))
@@ -224,9 +227,9 @@ def check_versions(version: str, json_data: dict[str, Any]) -> None:
             json_data["plugins/llm-wiki-client/.claude-plugin/plugin.json"],
             "plugins/llm-wiki-client/.claude-plugin/plugin.json",
         ),
-        "plugins/llm-wiki-client/.codex-plugin/plugin.json": get_manifest_version(
-            json_data["plugins/llm-wiki-client/.codex-plugin/plugin.json"],
-            "plugins/llm-wiki-client/.codex-plugin/plugin.json",
+        "plugins/llm-wiki-client-codex/.codex-plugin/plugin.json": get_manifest_version(
+            json_data["plugins/llm-wiki-client-codex/.codex-plugin/plugin.json"],
+            "plugins/llm-wiki-client-codex/.codex-plugin/plugin.json",
         ),
     }
     for relative_path, actual in version_checks.items():
@@ -241,10 +244,10 @@ def check_versions(version: str, json_data: dict[str, Any]) -> None:
 
 
 def check_codex_manifest_skill_root(json_data: dict[str, Any]) -> None:
-    relative_path = "plugins/llm-wiki-client/.codex-plugin/plugin.json"
+    relative_path = "plugins/llm-wiki-client-codex/.codex-plugin/plugin.json"
     manifest = require_dict(json_data[relative_path], relative_path)
     actual = manifest.get("skills")
-    expected = "./codex/skills/"
+    expected = "./skills/"
     if actual != expected:
         fail(f"Codex manifest skill root mismatch in {relative_path}: {actual} != {expected}")
 

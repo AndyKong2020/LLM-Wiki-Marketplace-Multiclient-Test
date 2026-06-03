@@ -1,8 +1,8 @@
 # LLM-Wiki Client
 
-CANN-Infer-Wiki 云端服务的多客户端 adapter。`plugins/llm-wiki-client/` 同时承载
-Claude Code 和 Codex adapter；OpenCode adapter 由同一套源模板生成到 repository root
-的 `dist/opencode/`。
+CANN-Infer-Wiki 云端服务的 Claude Code adapter。Codex adapter 单独生成到
+`plugins/llm-wiki-client-codex/`，避免 Codex 递归扫描到 Claude Code 专属 `skills/`。
+OpenCode adapter 由同一套源模板生成到 repository root 的 `dist/opencode/`。
 
 ## Commands And Skills
 
@@ -13,23 +13,28 @@ Claude Code slash commands：
   如果用户确认且配置了 `LLM_WIKI_UPLOAD_TOKEN`，上传一份 `tar.gz` 副本。
 
 `llm-wiki-cloud-query` 没有 slash command。它由 pin block 在需要 CANN-Infer-Wiki
-知识的任务阶段自动触发。Codex 使用同名 skills，但从 `codex/skills` 读取，避免混用
-Claude Code 专属 tool 名。
+知识的任务阶段自动触发。
 
 ## Adapter Layout
 
-`plugins/llm-wiki-client/` 内的 adapter 文件包括：
+`plugins/llm-wiki-client/` 内的 Claude Code adapter 文件包括：
 
 - `.claude-plugin/plugin.json`：Claude Code plugin manifest。
-- `.codex-plugin/plugin.json`：Codex plugin manifest，skill root 指向 `./codex/skills/`。
-- `.mcp.json`：Claude Code / Codex 共享的远程 MCP 配置。
+- `.mcp.json`：Claude Code 远程 MCP 配置。
 - `commands/`：Claude Code slash command。
 - `skills/`：Claude Code skills。
-- `codex/skills/`：Codex skills。
+
+Codex adapter 生成到 `plugins/llm-wiki-client-codex/`：
+
+- `.codex-plugin/plugin.json`：Codex plugin manifest，skill root 指向 `./skills/`。
+- `.mcp.json`：Codex 远程 MCP 配置。
+- `skills/`：Codex skills。
 
 OpenCode adapter 不放在本目录内，而是生成到 root `dist/opencode/`：
 
+- `dist/opencode/bootstrap.sh`
 - `dist/opencode/install-opencode.sh`
+- `dist/opencode/uninstall.sh`
 - `dist/opencode/opencode.json`
 - `dist/opencode/.opencode/commands/`
 - `dist/opencode/.opencode/skills/`

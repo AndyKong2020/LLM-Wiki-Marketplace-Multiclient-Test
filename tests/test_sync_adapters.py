@@ -231,16 +231,17 @@ class SyncAdaptersTests(unittest.TestCase):
             ".claude-plugin/marketplace.json",
             ".agents/plugins/marketplace.json",
             "plugins/llm-wiki-client/.claude-plugin/plugin.json",
-            "plugins/llm-wiki-client/.codex-plugin/plugin.json",
             "plugins/llm-wiki-client/.mcp.json",
+            "plugins/llm-wiki-client-codex/.codex-plugin/plugin.json",
+            "plugins/llm-wiki-client-codex/.mcp.json",
             "plugins/llm-wiki-client/commands/wiki-cloud-mount.md",
             "plugins/llm-wiki-client/commands/wiki-cloud-backflow.md",
             "plugins/llm-wiki-client/skills/llm-wiki-cloud-mount/SKILL.md",
             "plugins/llm-wiki-client/skills/llm-wiki-cloud-query/SKILL.md",
             "plugins/llm-wiki-client/skills/llm-wiki-cloud-backflow/SKILL.md",
-            "plugins/llm-wiki-client/codex/skills/llm-wiki-cloud-mount/SKILL.md",
-            "plugins/llm-wiki-client/codex/skills/llm-wiki-cloud-query/SKILL.md",
-            "plugins/llm-wiki-client/codex/skills/llm-wiki-cloud-backflow/SKILL.md",
+            "plugins/llm-wiki-client-codex/skills/llm-wiki-cloud-mount/SKILL.md",
+            "plugins/llm-wiki-client-codex/skills/llm-wiki-cloud-query/SKILL.md",
+            "plugins/llm-wiki-client-codex/skills/llm-wiki-cloud-backflow/SKILL.md",
             "dist/opencode/opencode.json",
             "dist/opencode/bootstrap.sh",
             "dist/opencode/install-opencode.sh",
@@ -259,7 +260,7 @@ class SyncAdaptersTests(unittest.TestCase):
         temp_root = self.run_sync()
         generated = [
             "plugins/llm-wiki-client/skills/llm-wiki-cloud-mount/SKILL.md",
-            "plugins/llm-wiki-client/codex/skills/llm-wiki-cloud-mount/SKILL.md",
+            "plugins/llm-wiki-client-codex/skills/llm-wiki-cloud-mount/SKILL.md",
             "dist/opencode/.opencode/skills/llm-wiki-cloud-mount/SKILL.md",
         ]
         for rel in generated:
@@ -274,7 +275,7 @@ class SyncAdaptersTests(unittest.TestCase):
     def test_sync_generates_platform_specific_instruction_targets(self):
         temp_root = self.run_sync()
         claude_mount = (temp_root / "plugins/llm-wiki-client/skills/llm-wiki-cloud-mount/SKILL.md").read_text(encoding="utf-8")
-        codex_mount_path = temp_root / "plugins/llm-wiki-client/codex/skills/llm-wiki-cloud-mount/SKILL.md"
+        codex_mount_path = temp_root / "plugins/llm-wiki-client-codex/skills/llm-wiki-cloud-mount/SKILL.md"
         self.assertTrue(codex_mount_path.exists())
         codex_mount = codex_mount_path.read_text(encoding="utf-8")
         opencode_mount = (temp_root / "dist/opencode/.opencode/skills/llm-wiki-cloud-mount/SKILL.md").read_text(encoding="utf-8")
@@ -287,12 +288,14 @@ class SyncAdaptersTests(unittest.TestCase):
     def test_sync_generates_codex_specific_skill_root(self):
         temp_root = self.run_sync()
         codex_manifest = json.loads(
-            (temp_root / "plugins/llm-wiki-client/.codex-plugin/plugin.json").read_text(encoding="utf-8")
+            (temp_root / "plugins/llm-wiki-client-codex/.codex-plugin/plugin.json").read_text(encoding="utf-8")
         )
         self.assertIn("skills", codex_manifest)
-        self.assertEqual(codex_manifest["skills"], "./codex/skills/")
+        self.assertEqual(codex_manifest["skills"], "./skills/")
+        self.assertFalse((temp_root / "plugins/llm-wiki-client-codex/codex").exists())
+        self.assertFalse((temp_root / "plugins/llm-wiki-client-codex/commands").exists())
 
-        codex_mount_path = temp_root / "plugins/llm-wiki-client/codex/skills/llm-wiki-cloud-mount/SKILL.md"
+        codex_mount_path = temp_root / "plugins/llm-wiki-client-codex/skills/llm-wiki-cloud-mount/SKILL.md"
         self.assertTrue(codex_mount_path.exists())
         codex_mount = codex_mount_path.read_text(encoding="utf-8")
         self.assertIn("AGENTS.md", codex_mount)
@@ -306,8 +309,9 @@ class SyncAdaptersTests(unittest.TestCase):
             ".claude-plugin/marketplace.json",
             ".agents/plugins/marketplace.json",
             "plugins/llm-wiki-client/.claude-plugin/plugin.json",
-            "plugins/llm-wiki-client/.codex-plugin/plugin.json",
             "plugins/llm-wiki-client/.mcp.json",
+            "plugins/llm-wiki-client-codex/.codex-plugin/plugin.json",
+            "plugins/llm-wiki-client-codex/.mcp.json",
             "dist/opencode/opencode.json",
         ]:
             with self.subTest(rel=rel):

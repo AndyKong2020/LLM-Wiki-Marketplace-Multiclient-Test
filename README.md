@@ -174,8 +174,8 @@ Token 由 operator 通过仓库外渠道分发。不要提交 token，不要把 
 ## Generated Adapter 维护
 
 `src/` 和 `platforms/` 是可编辑源头。`scripts/sync_adapters.py` 会生成 Claude Code、
-Codex 和 OpenCode adapter，包括 `plugins/llm-wiki-client/`、`.claude-plugin/marketplace.json`、
-`.agents/plugins/marketplace.json` 和 `dist/opencode/`。维护生成产物时不要直接手改带有
+Codex 和 OpenCode adapter，包括 `plugins/llm-wiki-client/`、`plugins/llm-wiki-client-codex/`、
+`.claude-plugin/marketplace.json`、`.agents/plugins/marketplace.json` 和 `dist/opencode/`。维护生成产物时不要直接手改带有
 generated marker 的文件；应修改源模板后运行：
 
 ```bash
@@ -193,7 +193,6 @@ python3 scripts/validate_release.py
 .agents/plugins/marketplace.json
 plugins/llm-wiki-client/
   .claude-plugin/plugin.json
-  .codex-plugin/plugin.json
   .mcp.json
   README.md
   commands/
@@ -203,7 +202,10 @@ plugins/llm-wiki-client/
     llm-wiki-cloud-mount/SKILL.md
     llm-wiki-cloud-query/SKILL.md
     llm-wiki-cloud-backflow/SKILL.md
-  codex/skills/
+plugins/llm-wiki-client-codex/
+  .codex-plugin/plugin.json
+  .mcp.json
+  skills/
     llm-wiki-cloud-mount/SKILL.md
     llm-wiki-cloud-query/SKILL.md
     llm-wiki-cloud-backflow/SKILL.md

@@ -8,7 +8,7 @@
       "name": "llm-wiki-client",
       "source": {
         "source": "local",
-        "path": "./plugins/llm-wiki-client"
+        "path": "./plugins/llm-wiki-client-codex"
       },
       "policy": {
         "installation": "AVAILABLE",

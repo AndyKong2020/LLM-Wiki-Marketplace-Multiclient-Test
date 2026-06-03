@@ -15,8 +15,10 @@ TEMPLATE_SLOT_RE = re.compile(r"{{([a-zA-Z0-9_]+)}}")
 EXECUTABLE_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH
 GENERATED_JSON_OUTPUTS = [
     ".agents/plugins/marketplace.json",
-    "plugins/llm-wiki-client/.codex-plugin/plugin.json",
     "plugins/llm-wiki-client/.mcp.json",
+    "plugins/llm-wiki-client/.codex-plugin/plugin.json",
+    "plugins/llm-wiki-client-codex/.codex-plugin/plugin.json",
+    "plugins/llm-wiki-client-codex/.mcp.json",
     ".claude-plugin/marketplace.json",
     "plugins/llm-wiki-client/.claude-plugin/plugin.json",
     "dist/opencode/opencode.json",
@@ -30,6 +32,7 @@ GENERATED_MARKER_CLEANUP_DIRS = [
     "plugins/llm-wiki-client/commands",
     "plugins/llm-wiki-client/skills",
     "plugins/llm-wiki-client/codex/skills",
+    "plugins/llm-wiki-client-codex/skills",
     "dist/opencode/.opencode/commands",
     "dist/opencode/.opencode/skills",
 ]
@@ -205,7 +208,7 @@ def generate_manifests(base_values: dict[str, str]) -> None:
     )
     write_rendered_template(
         "platforms/codex/plugin.json.tmpl",
-        "plugins/llm-wiki-client/.codex-plugin/plugin.json",
+        "plugins/llm-wiki-client-codex/.codex-plugin/plugin.json",
         codex,
         validate_json=True,
     )
@@ -220,6 +223,10 @@ def generate_manifests(base_values: dict[str, str]) -> None:
     }
     write_text(
         ROOT / "plugins/llm-wiki-client/.mcp.json",
+        json.dumps(mcp_config, ensure_ascii=False, indent=2),
+    )
+    write_text(
+        ROOT / "plugins/llm-wiki-client-codex/.mcp.json",
         json.dumps(mcp_config, ensure_ascii=False, indent=2),
     )
 
@@ -277,7 +284,7 @@ def main() -> None:
     generate_commands(claude, "plugins/llm-wiki-client/commands")
     generate_commands(opencode, "dist/opencode/.opencode/commands")
     generate_skills(claude, "plugins/llm-wiki-client/skills")
-    generate_skills(codex, "plugins/llm-wiki-client/codex/skills")
+    generate_skills(codex, "plugins/llm-wiki-client-codex/skills")
     generate_skills(opencode, "dist/opencode/.opencode/skills")
 
 

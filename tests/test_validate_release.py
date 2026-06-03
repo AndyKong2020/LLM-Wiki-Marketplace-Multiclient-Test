@@ -106,9 +106,9 @@ class ValidateReleaseTests(unittest.TestCase):
     def test_validate_release_checks_codex_manifest_skill_root(self):
         with temp_repo() as repo:
             run_sync(repo)
-            manifest = repo / "plugins/llm-wiki-client/.codex-plugin/plugin.json"
+            manifest = repo / "plugins/llm-wiki-client-codex/.codex-plugin/plugin.json"
             data = json.loads(manifest.read_text(encoding="utf-8"))
-            data["skills"] = "./skills/"
+            data["skills"] = "./codex/skills/"
             manifest.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             result = run_validate(repo)
             self.assertNotEqual(result.returncode, 0)
@@ -149,7 +149,7 @@ class ValidateReleaseTests(unittest.TestCase):
             source_path = "src/skills/llm-wiki-cloud-query/SKILL.md.tmpl"
             generated_paths = [
                 "plugins/llm-wiki-client/skills/llm-wiki-cloud-query/SKILL.md",
-                "plugins/llm-wiki-client/codex/skills/llm-wiki-cloud-query/SKILL.md",
+                "plugins/llm-wiki-client-codex/skills/llm-wiki-cloud-query/SKILL.md",
                 "dist/opencode/.opencode/skills/llm-wiki-cloud-query/SKILL.md",
             ]
 
@@ -262,7 +262,7 @@ class DocumentationTests(unittest.TestCase):
             ".claude-plugin/plugin.json",
             ".codex-plugin/plugin.json",
             ".mcp.json",
-            "codex/skills",
+            "plugins/llm-wiki-client-codex",
             "dist/opencode",
             "src/",
             "platforms/",

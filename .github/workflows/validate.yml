@@ -32,4 +32,5 @@ jobs:
             .agents \
             .claude-plugin \
             plugins/llm-wiki-client \
+            plugins/llm-wiki-client-codex \
             dist/opencode

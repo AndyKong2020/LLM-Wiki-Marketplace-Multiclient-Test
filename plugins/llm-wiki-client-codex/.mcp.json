@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "cann-infer-wiki-cloud": {
+      "type": "http",
+      "url": "https://wiki.andykong.top/mcp"
+    }
+  }
+}
