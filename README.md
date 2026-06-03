@@ -171,13 +171,11 @@ export LLM_WIKI_UPLOAD_TOKEN="llmw_<token-from-operator>"
 Token 由 operator 通过仓库外渠道分发。不要提交 token，不要把 token 写入归档，
 也不要粘贴到日志里。
 
-## Generated Adapter 维护
+## Adapter 维护
 
-`src/` 和 `platforms/` 是可编辑源头。`scripts/sync_adapters.py` 会生成 Claude Code、
-Codex 和 OpenCode adapter，包括 `plugins/llm-wiki-client-claude/`、
-`plugins/llm-wiki-client-codex/`、`plugins/llm-wiki-client-opencode/`、
-`.claude-plugin/marketplace.json` 和 `.agents/plugins/marketplace.json`。维护生成产物时不要直接手改带有
-generated marker 的文件；应修改源模板后运行：
+`src/skills/` 是三端 skill 的唯一源头，`platforms/` 保存需要变量渲染的 JSON 模板。
+`scripts/sync_adapters.py` 会生成 Claude Code、Codex 和 OpenCode 的 skills、manifest 与 MCP
+配置。维护生成产物时不要直接手改带有 generated marker 的文件；应修改源模板后运行：
 
 ```bash
 python3 scripts/sync_adapters.py
@@ -186,6 +184,9 @@ python3 scripts/validate_release.py
 
 `validate_release.py` 会在临时副本中重新运行 sync，并确认当前 generated outputs 与模板
 生成结果一致；因此同步后的 generated 产物即使尚未提交也可以通过，手工改动或漏生成仍会失败。
+
+OpenCode 的 `bootstrap.sh`、`install-opencode.sh`、`uninstall.sh` 是直接维护的发布脚本，
+不再走 `.tmpl` 生成；改安装行为时直接改 `plugins/llm-wiki-client-opencode/` 下的脚本。
 
 ## 目录结构
 
