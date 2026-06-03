@@ -100,20 +100,17 @@ codex
 
 ### OpenCode
 
-从测试分支远程安装到隔离目录：
+安装或更新：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test/main/dist/opencode/bootstrap.sh | bash
+```
+
+隔离测试安装：
 
 ```bash
 tmpdir="$(mktemp -d)"
-git clone --depth 1 --branch main \
-  git@github.com:AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test.git "$tmpdir/marketplace"
-bash "$tmpdir/marketplace/dist/opencode/install-opencode.sh" --prefix "$tmpdir/opencode"
-```
-
-更新：
-
-```bash
-git -C "$tmpdir/marketplace" pull --ff-only
-bash "$tmpdir/marketplace/dist/opencode/install-opencode.sh" --prefix "$tmpdir/opencode"
+curl -fsSL https://raw.githubusercontent.com/AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test/main/dist/opencode/bootstrap.sh | bash -s -- --prefix "$tmpdir/opencode"
 ```
 
 启动隔离 OpenCode 会话：
@@ -137,8 +134,8 @@ opencode
 /wiki-cloud-backflow
 ```
 
-OpenCode installer 会把 command、skill 和 MCP config 写入 `--prefix` 指定目录；省略
-`--prefix` 才会写入默认 `~/.config/opencode`。重新运行 `install-opencode.sh` 即可覆盖为当前测试版本。
+OpenCode installer 默认写入全局 `~/.config/opencode`；重新运行同一条 `curl | bash`
+即可覆盖 command、skill，并合并更新 MCP config。`--prefix` 只用于隔离测试。
 
 ### 隔离测试仓库
 
@@ -204,6 +201,7 @@ plugins/llm-wiki-client/
     llm-wiki-cloud-query/SKILL.md
     llm-wiki-cloud-backflow/SKILL.md
 dist/opencode/
+  bootstrap.sh
   install-opencode.sh
   opencode.json
   .opencode/

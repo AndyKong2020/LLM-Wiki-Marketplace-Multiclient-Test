@@ -95,6 +95,7 @@ class TemplateInventoryTests(unittest.TestCase):
             "platforms/codex/marketplace.json.tmpl",
             "platforms/codex/plugin.json.tmpl",
             "platforms/opencode/opencode.json.tmpl",
+            "platforms/opencode/bootstrap.sh.tmpl",
             "platforms/opencode/install-opencode.sh.tmpl",
         ]
         for rel in required:
@@ -240,6 +241,7 @@ class SyncAdaptersTests(unittest.TestCase):
             "plugins/llm-wiki-client/codex/skills/llm-wiki-cloud-query/SKILL.md",
             "plugins/llm-wiki-client/codex/skills/llm-wiki-cloud-backflow/SKILL.md",
             "dist/opencode/opencode.json",
+            "dist/opencode/bootstrap.sh",
             "dist/opencode/install-opencode.sh",
             "dist/opencode/.opencode/commands/wiki-cloud-mount.md",
             "dist/opencode/.opencode/commands/wiki-cloud-backflow.md",

@@ -235,7 +235,7 @@ class DocumentationTests(unittest.TestCase):
             "codex plugin marketplace add AndyKong2020/LLM-Wiki-Marketplace-Multiclient-Test",
             "codex plugin marketplace upgrade llm-wiki-cloud-test",
             "codex plugin add llm-wiki-client@llm-wiki-cloud-test",
-            "install-opencode.sh",
+            "bootstrap.sh | bash",
             "模拟用户使用流程",
             "CLAUDE_CONFIG_DIR",
             "CODEX_HOME",

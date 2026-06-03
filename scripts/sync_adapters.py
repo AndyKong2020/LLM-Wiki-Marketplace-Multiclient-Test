@@ -22,6 +22,7 @@ GENERATED_JSON_OUTPUTS = [
     "dist/opencode/opencode.json",
 ]
 GENERATED_DIRECT_OUTPUTS = [
+    "dist/opencode/bootstrap.sh",
     "dist/opencode/install-opencode.sh",
 ]
 GENERATED_MARKER_CLEANUP_DIRS = [
@@ -226,6 +227,13 @@ def generate_manifests(base_values: dict[str, str]) -> None:
         "dist/opencode/opencode.json",
         opencode,
         validate_json=True,
+    )
+    write_rendered_template(
+        "platforms/opencode/bootstrap.sh.tmpl",
+        "dist/opencode/bootstrap.sh",
+        opencode,
+        shell_marker=True,
+        executable=True,
     )
     write_rendered_template(
         "platforms/opencode/install-opencode.sh.tmpl",
